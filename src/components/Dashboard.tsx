@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import SwimmerCard from "./SwimmerCard";
 import TrendChart from "./TrendChart";
 import ProgressTable from "./ProgressTable";
@@ -46,15 +47,23 @@ export default function Dashboard({
             {totalSwims === 1 ? "" : "s"} logged
           </p>
         </div>
-        <button
-          onClick={() => {
-            setModalSwimmerId(null);
-            setModalOpen(true);
-          }}
-          className="self-start rounded-full bg-[var(--foreground)] px-4 py-2 text-sm font-medium text-[var(--background)]"
-        >
-          + Log a swim
-        </button>
+        <div className="flex items-center gap-2 self-start">
+          <Link
+            href="/sets"
+            className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--surface)]"
+          >
+            🏋️ Sets
+          </Link>
+          <button
+            onClick={() => {
+              setModalSwimmerId(null);
+              setModalOpen(true);
+            }}
+            className="rounded-full bg-[var(--foreground)] px-4 py-2 text-sm font-medium text-[var(--background)]"
+          >
+            + Log a swim
+          </button>
+        </div>
       </header>
 
       <div className="flex items-center gap-2">

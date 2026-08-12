@@ -1,4 +1,4 @@
-import type { Distance, SwimmerWithEntries, WaitSession } from "./types";
+import type { Distance, SetGrid, SwimmerWithEntries, SwimSet, WaitSession } from "./types";
 
 export type NewEntryInput = {
   swimmerId: string;
@@ -14,6 +14,12 @@ export type EntryUpdate = {
   note?: string | null;
 };
 
+export type SetUpdate = {
+  name: string;
+  date: string | null;
+  grid: SetGrid;
+};
+
 export interface SwimStore {
   getSwimmers(): Promise<SwimmerWithEntries[]>;
   addSwimmer(name: string): Promise<SwimmerWithEntries>;
@@ -22,4 +28,8 @@ export interface SwimStore {
   getWaitSessions(): Promise<WaitSession[]>;
   addWaitSession(seconds: number, date: string): Promise<WaitSession[]>;
   updateWaitSession(id: string, seconds: number, date: string): Promise<WaitSession[]>;
+  getSets(): Promise<SwimSet[]>;
+  createSet(name: string): Promise<SwimSet[]>;
+  updateSet(id: string, input: SetUpdate): Promise<SwimSet[]>;
+  deleteSet(id: string): Promise<SwimSet[]>;
 }

@@ -28,6 +28,30 @@ export type WaitSession = {
   createdAt: string;
 };
 
+export type SetGrid = {
+  columns: string[];
+  rows: { label: string; values: (number | null)[] }[];
+};
+
+export type SwimSet = {
+  id: string;
+  name: string;
+  date: string | null;
+  grid: SetGrid;
+  createdAt: string;
+};
+
+export function defaultSetGrid(): SetGrid {
+  return {
+    columns: ["1", "2", "3"],
+    rows: [
+      { label: "Warm up", values: [200, 200, 200] },
+      { label: "Main set", values: [null, null, null] },
+      { label: "Cool down", values: [100, 100, 100] },
+    ],
+  };
+}
+
 // Validated categorical palette (light-mode hex) — fixed order, never cycled/reassigned.
 export const SWIMMER_COLORS = [
   "#2a78d6", // blue

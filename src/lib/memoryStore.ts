@@ -1,8 +1,14 @@
 import { randomUUID } from "crypto";
 import { parseTimeToSeconds } from "./time";
 import { SEED_SWIMMERS, SEED_WAIT_SESSIONS } from "./seedData";
-import { SWIMMER_COLORS, type SwimmerWithEntries, type WaitSession } from "./types";
-import type { EntryUpdate, NewEntryInput, SwimStore } from "./store.types";
+import {
+  defaultSetGrid,
+  SWIMMER_COLORS,
+  type SwimmerWithEntries,
+  type SwimSet,
+  type WaitSession,
+} from "./types";
+import type { EntryUpdate, NewEntryInput, SetUpdate, SwimStore } from "./store.types";
 
 const numColors = SWIMMER_COLORS.length;
 
@@ -42,12 +48,16 @@ function buildInitialWaitSessions(): WaitSession[] {
 const globalForStore = globalThis as unknown as {
   __swimState?: SwimmerWithEntries[];
   __waitState?: WaitSession[];
+  __setsState?: SwimSet[];
 };
 if (!globalForStore.__swimState) {
   globalForStore.__swimState = buildInitialState();
 }
 if (!globalForStore.__waitState) {
   globalForStore.__waitState = buildInitialWaitSessions();
+}
+if (!globalForStore.__setsState) {
+  globalForStore.__setsState = [];
 }
 
 export const memoryStore: SwimStore = {
@@ -119,5 +129,35 @@ export const memoryStore: SwimStore = {
       session.date = date;
     }
     return globalForStore.__waitState!;
+  },
+
+  async getSets() {
+    return globalForStore.__setsState!;
+  },
+
+  async createSet(name: string) {
+    globalForStore.__setsState!.push({
+      id: randomUUID(),
+      name,
+      date: null,
+      grid: defaultSetGrid(),
+      createdAt: new Date().toISOString(),
+    });
+    return globalForStore.__setsState!;
+  },
+
+  async updateSet(id: string, input: SetUpdate) {
+    const set = globalForStore.__setsState!.find((s) => s.id === id);
+    if (set) {
+      set.name = input.name;
+      set.date = input.date;
+      set.grid = input.grid;
+    }
+    return globalForStore.__setsState!;
+  },
+
+  async deleteSet(id: string) {
+    globalForStore.__setsState = globalForStore.__setsState!.filter((s) => s.id !== id);
+    return globalForStore.__setsState;
   },
 };

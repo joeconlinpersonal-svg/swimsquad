@@ -46,3 +46,11 @@ export function formatDate(iso: string | null): string {
   if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
+
+// Compact form for narrow layouts — drops the year (e.g. "16 Jun").
+export function formatDateShort(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+}

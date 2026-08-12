@@ -34,4 +34,16 @@ export const store: SwimStore = {
   async updateWaitSession(id, seconds, date) {
     return (await getStore()).updateWaitSession(id, seconds, date);
   },
+  async getSets() {
+    return (await getStore()).getSets();
+  },
+  async createSet(name) {
+    return (await getStore()).createSet(name);
+  },
+  async updateSet(id, input) {
+    return (await getStore()).updateSet(id, input);
+  },
+  async deleteSet(id) {
+    return (await getStore()).deleteSet(id);
+  },
 };

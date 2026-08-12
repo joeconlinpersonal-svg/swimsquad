@@ -3,13 +3,15 @@ import { randomUUID } from "crypto";
 import { SEED_SWIMMERS, SEED_WAIT_SESSIONS } from "./seedData";
 import { parseTimeToSeconds } from "./time";
 import {
+  defaultSetGrid,
   SWIMMER_COLORS,
   type Entry,
   type Swimmer,
   type SwimmerWithEntries,
+  type SwimSet,
   type WaitSession,
 } from "./types";
-import type { EntryUpdate, NewEntryInput, SwimStore } from "./store.types";
+import type { EntryUpdate, NewEntryInput, SetUpdate, SwimStore } from "./store.types";
 
 const numColors = SWIMMER_COLORS.length;
 
@@ -48,6 +50,16 @@ async function ensureSchema() {
       id UUID PRIMARY KEY,
       seconds NUMERIC NOT NULL,
       date DATE NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS swim_sets (
+      id UUID PRIMARY KEY,
+      name TEXT NOT NULL,
+      date DATE,
+      grid JSONB NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
   `;
@@ -177,5 +189,42 @@ export const pgStore: SwimStore = {
     await init();
     await sql`UPDATE wait_sessions SET seconds = ${seconds}, date = ${date} WHERE id = ${id}`;
     return pgStore.getWaitSessions();
+  },
+
+  async getSets() {
+    await init();
+    const rows = (await sql`
+      SELECT id, name, date, grid, created_at AS "createdAt" FROM swim_sets
+      ORDER BY created_at
+    `) as SwimSet[];
+    return rows.map((r) => ({
+      ...r,
+      date: r.date ? new Date(r.date).toISOString().slice(0, 10) : null,
+    }));
+  },
+
+  async createSet(name: string) {
+    await init();
+    await sql`
+      INSERT INTO swim_sets (id, name, date, grid)
+      VALUES (${randomUUID()}, ${name}, ${null}, ${sql.json(defaultSetGrid())})
+    `;
+    return pgStore.getSets();
+  },
+
+  async updateSet(id: string, input: SetUpdate) {
+    await init();
+    await sql`
+      UPDATE swim_sets
+      SET name = ${input.name}, date = ${input.date}, grid = ${sql.json(input.grid)}
+      WHERE id = ${id}
+    `;
+    return pgStore.getSets();
+  },
+
+  async deleteSet(id: string) {
+    await init();
+    await sql`DELETE FROM swim_sets WHERE id = ${id}`;
+    return pgStore.getSets();
   },
 };
