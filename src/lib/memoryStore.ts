@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { parseTimeToSeconds } from "./time";
 import { SEED_SWIMMERS, SEED_WAIT_SESSIONS } from "./seedData";
 import { SWIMMER_COLORS, type SwimmerWithEntries, type WaitSession } from "./types";
-import type { NewEntryInput, SwimStore } from "./store.types";
+import type { EntryUpdate, NewEntryInput, SwimStore } from "./store.types";
 
 const numColors = SWIMMER_COLORS.length;
 
@@ -85,6 +85,19 @@ export const memoryStore: SwimStore = {
     return globalForStore.__swimState!;
   },
 
+  async updateEntry(id: string, input: EntryUpdate) {
+    for (const swimmer of globalForStore.__swimState!) {
+      const entry = swimmer.entries.find((e) => e.id === id);
+      if (entry) {
+        entry.timeSeconds = input.timeSeconds;
+        entry.date = input.date;
+        entry.note = input.note ?? null;
+        break;
+      }
+    }
+    return globalForStore.__swimState!;
+  },
+
   async getWaitSessions() {
     return globalForStore.__waitState!;
   },
@@ -96,6 +109,15 @@ export const memoryStore: SwimStore = {
       date,
       createdAt: new Date().toISOString(),
     });
+    return globalForStore.__waitState!;
+  },
+
+  async updateWaitSession(id: string, seconds: number, date: string) {
+    const session = globalForStore.__waitState!.find((w) => w.id === id);
+    if (session) {
+      session.seconds = seconds;
+      session.date = date;
+    }
     return globalForStore.__waitState!;
   },
 };

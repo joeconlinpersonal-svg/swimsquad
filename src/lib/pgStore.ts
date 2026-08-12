@@ -9,7 +9,7 @@ import {
   type SwimmerWithEntries,
   type WaitSession,
 } from "./types";
-import type { NewEntryInput, SwimStore } from "./store.types";
+import type { EntryUpdate, NewEntryInput, SwimStore } from "./store.types";
 
 const numColors = SWIMMER_COLORS.length;
 
@@ -144,6 +144,16 @@ export const pgStore: SwimStore = {
     return loadAll();
   },
 
+  async updateEntry(id: string, input: EntryUpdate) {
+    await init();
+    await sql`
+      UPDATE entries
+      SET time_seconds = ${input.timeSeconds}, date = ${input.date}, note = ${input.note ?? null}
+      WHERE id = ${id}
+    `;
+    return loadAll();
+  },
+
   async getWaitSessions() {
     await init();
     const rows = (await sql`
@@ -160,6 +170,12 @@ export const pgStore: SwimStore = {
   async addWaitSession(seconds: number, date: string) {
     await init();
     await sql`INSERT INTO wait_sessions (id, seconds, date) VALUES (${randomUUID()}, ${seconds}, ${date})`;
+    return pgStore.getWaitSessions();
+  },
+
+  async updateWaitSession(id: string, seconds: number, date: string) {
+    await init();
+    await sql`UPDATE wait_sessions SET seconds = ${seconds}, date = ${date} WHERE id = ${id}`;
     return pgStore.getWaitSessions();
   },
 };

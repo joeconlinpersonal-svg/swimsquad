@@ -5,9 +5,10 @@ import SwimmerCard from "./SwimmerCard";
 import TrendChart from "./TrendChart";
 import ProgressTable from "./ProgressTable";
 import AddEntryModal from "./AddEntryModal";
+import EditEntryModal from "./EditEntryModal";
 import WaitTracker from "./WaitTracker";
 import { paceHistory } from "@/lib/stats";
-import { DISTANCES, type SwimmerWithEntries, type WaitSession } from "@/lib/types";
+import { DISTANCES, type Entry, type SwimmerWithEntries, type WaitSession } from "@/lib/types";
 
 export default function Dashboard({
   initial,
@@ -19,6 +20,7 @@ export default function Dashboard({
   const [swimmers, setSwimmers] = useState(initial);
   const [modalSwimmerId, setModalSwimmerId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<{ entry: Entry; swimmerName: string } | null>(null);
   const [filterId, setFilterId] = useState<string>("all");
 
   const totalSwims = swimmers.reduce((n, s) => n + s.entries.length, 0);
@@ -33,11 +35,13 @@ export default function Dashboard({
   );
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-3 py-6 sm:px-6 sm:py-8">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">🏊 Squad Swim Tracker</h1>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+            🏊 Squad Swim Tracker
+          </h1>
+          <p className="mt-0.5 text-xs text-[var(--text-secondary)] sm:text-sm">
             {swimmers.length} swimmer{swimmers.length === 1 ? "" : "s"} · {totalSwims} swim
             {totalSwims === 1 ? "" : "s"} logged
           </p>
@@ -72,12 +76,15 @@ export default function Dashboard({
         </select>
       </div>
 
-      <section className="flex flex-col gap-4">
+      <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold text-[var(--text-secondary)]">Progress over time</h2>
-        <ProgressTable swimmers={filtered} />
+        <ProgressTable
+          swimmers={filtered}
+          onEditEntry={(entry, swimmerName) => setEditing({ entry, swimmerName })}
+        />
       </section>
 
-      <section className="flex flex-col gap-4">
+      <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold text-[var(--text-secondary)]">Trend graphs</h2>
         {distancesWithData.length === 0 && (
           <div className="flex h-32 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--text-muted)]">
@@ -85,7 +92,7 @@ export default function Dashboard({
           </div>
         )}
         {distancesWithData.map((distance) => (
-          <div key={distance} className="flex flex-col gap-2">
+          <div key={distance} className="flex flex-col gap-1.5">
             <h3 className="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
               {distance}m pace
             </h3>
@@ -94,9 +101,9 @@ export default function Dashboard({
         ))}
       </section>
 
-      <section className="flex flex-col gap-4">
+      <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold text-[var(--text-secondary)]">Swimmers</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {filtered.map((s) => (
             <SwimmerCard
               key={s.id}
@@ -117,6 +124,15 @@ export default function Dashboard({
           swimmers={swimmers}
           initialSwimmerId={modalSwimmerId}
           onClose={() => setModalOpen(false)}
+          onSaved={setSwimmers}
+        />
+      )}
+
+      {editing && (
+        <EditEntryModal
+          entry={editing.entry}
+          swimmerName={editing.swimmerName}
+          onClose={() => setEditing(null)}
           onSaved={setSwimmers}
         />
       )}

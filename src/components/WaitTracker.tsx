@@ -23,12 +23,20 @@ function todayISO() {
   return new Date(d.getTime() - offset * 60000).toISOString().slice(0, 10);
 }
 
+function secondsToInput(totalSeconds: number): string {
+  const s = Math.round(totalSeconds);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
 export default function WaitTracker({ initial }: Props) {
   const [sessions, setSessions] = useState(initial);
   const [running, setRunning] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTime, setEditTime] = useState("");
+  const [editDate, setEditDate] = useState("");
   const startRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -68,8 +76,40 @@ export default function WaitTracker({ initial }: Props) {
     }
   }
 
+  function startEdit(s: WaitSession) {
+    setEditingId(s.id);
+    setEditTime(secondsToInput(s.seconds));
+    setEditDate(s.date);
+  }
+
+  async function saveEdit(id: string) {
+    setSaving(true);
+    setError(null);
+    try {
+      const [m, s] = editTime.split(":").map(Number);
+      const seconds = (m || 0) * 60 + (s || 0);
+      const res = await fetch(`/api/wait-sessions/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seconds, date: editDate }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not save session");
+      setSessions(data.sessions);
+      setEditingId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const total = sessions.reduce((sum, s) => sum + s.seconds, 0);
   const average = sessions.length ? total / sessions.length : 0;
+  const earliestDate = sessions.reduce(
+    (min, s) => (min === null || s.date < min ? s.date : min),
+    null as string | null
+  );
 
   const chartRows = [...sessions]
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
@@ -78,49 +118,59 @@ export default function WaitTracker({ initial }: Props) {
   const tableRows = [...sessions].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 
   return (
-    <section className="flex flex-col gap-4">
+    <section className="flex flex-col gap-3">
       <div>
         <h2 className="text-sm font-semibold text-[var(--text-secondary)]">
           Time Slow Joe has waited for the girls to finish showering
+          {earliestDate && (
+            <span className="font-normal text-[var(--text-muted)]">
+              {" "}
+              (since {formatDate(earliestDate)})
+            </span>
+          )}
         </h2>
       </div>
 
-      <div className="flex flex-col items-center gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:flex-row sm:justify-between">
-        <div className="font-mono text-4xl tabular-nums">
+      <div className="flex flex-col items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:flex-row sm:justify-between">
+        <div className="font-mono text-3xl tabular-nums sm:text-4xl">
           {formatSecondsToTime(running ? elapsedMs / 1000 : 0)}
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 sm:gap-6">
           <div className="text-center">
-            <div className="text-xs uppercase tracking-wide text-[var(--text-muted)]">
+            <div className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] sm:text-xs">
               Total
             </div>
-            <div className="font-mono text-lg tabular-nums">{formatSecondsToTime(total)}</div>
+            <div className="font-mono text-base tabular-nums sm:text-lg">
+              {formatSecondsToTime(total)}
+            </div>
           </div>
           <div className="text-center">
-            <div className="text-xs uppercase tracking-wide text-[var(--text-muted)]">
+            <div className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] sm:text-xs">
               Average
             </div>
-            <div className="font-mono text-lg tabular-nums">{formatSecondsToTime(average)}</div>
+            <div className="font-mono text-base tabular-nums sm:text-lg">
+              {formatSecondsToTime(average)}
+            </div>
           </div>
           <div className="text-center">
-            <div className="text-xs uppercase tracking-wide text-[var(--text-muted)]">
+            <div className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] sm:text-xs">
               Sessions
             </div>
-            <div className="font-mono text-lg tabular-nums">{sessions.length}</div>
+            <div className="font-mono text-base tabular-nums sm:text-lg">{sessions.length}</div>
           </div>
         </div>
         {!running ? (
           <button
             onClick={handleStart}
             disabled={saving}
-            className="rounded-full bg-[var(--foreground)] px-5 py-2 text-sm font-medium text-[var(--background)] disabled:opacity-50"
+            className="w-full rounded-full bg-[var(--foreground)] px-5 py-2 text-sm font-medium text-[var(--background)] disabled:opacity-50 sm:w-auto"
           >
             Start
           </button>
         ) : (
           <button
             onClick={handleStop}
-            className="rounded-full bg-[#e34948] px-5 py-2 text-sm font-medium text-white"
+            className="w-full rounded-full bg-[#e34948] px-5 py-2 text-sm font-medium text-white sm:w-auto"
           >
             Stop
           </button>
@@ -130,23 +180,23 @@ export default function WaitTracker({ initial }: Props) {
       {error && <p className="text-xs text-[#e34948]">{error}</p>}
 
       {chartRows.length > 0 && (
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-          <ResponsiveContainer width="100%" height={220}>
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-4">
+          <ResponsiveContainer width="100%" height={180}>
             <BarChart data={chartRows} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
               <CartesianGrid stroke="var(--gridline)" vertical={false} />
               <XAxis
                 dataKey="date"
                 tickFormatter={(d: string) => formatDate(d)}
                 stroke="var(--baseline)"
-                tick={{ fill: "var(--text-muted)", fontSize: 12 }}
+                tick={{ fill: "var(--text-muted)", fontSize: 11 }}
                 tickLine={false}
               />
               <YAxis
                 tickFormatter={(v: number) => formatSecondsToTime(v)}
                 stroke="var(--baseline)"
-                tick={{ fill: "var(--text-muted)", fontSize: 12 }}
+                tick={{ fill: "var(--text-muted)", fontSize: 11 }}
                 tickLine={false}
-                width={48}
+                width={44}
               />
               <Tooltip
                 contentStyle={{
@@ -166,27 +216,75 @@ export default function WaitTracker({ initial }: Props) {
 
       {tableRows.length > 0 && (
         <div className="overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--surface)]">
-          <table className="w-full min-w-[280px] border-collapse text-sm">
+          <table className="w-full min-w-[260px] border-collapse text-xs sm:text-sm">
             <thead>
-              <tr className="border-b border-[var(--border)] text-left text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
-                <th className="px-4 py-2 font-medium">Date</th>
-                <th className="px-4 py-2 text-right font-medium">Duration</th>
+              <tr className="border-b border-[var(--border)] text-left text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)] sm:text-xs">
+                <th className="px-2.5 py-1.5 font-medium sm:px-3 sm:py-2">Date</th>
+                <th className="px-2.5 py-1.5 text-right font-medium sm:px-3 sm:py-2">Duration</th>
+                <th className="w-8 px-1 py-1.5 sm:px-2" />
               </tr>
             </thead>
             <tbody>
-              {tableRows.map((s) => (
-                <tr
-                  key={s.id}
-                  className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--background)]"
-                >
-                  <td className="whitespace-nowrap px-4 py-2 text-[var(--text-secondary)]">
-                    {formatDate(s.date)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2 text-right font-mono tabular-nums">
-                    {formatSecondsToTime(s.seconds)}
-                  </td>
-                </tr>
-              ))}
+              {tableRows.map((s) =>
+                editingId === s.id ? (
+                  <tr key={s.id} className="border-b border-[var(--border)] last:border-0">
+                    <td className="px-2.5 py-1 sm:px-3 sm:py-1.5">
+                      <input
+                        type="date"
+                        value={editDate}
+                        onChange={(e) => setEditDate(e.target.value)}
+                        className="w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-1.5 py-0.5 text-xs"
+                      />
+                    </td>
+                    <td className="px-2.5 py-1 sm:px-3 sm:py-1.5">
+                      <input
+                        value={editTime}
+                        onChange={(e) => setEditTime(e.target.value)}
+                        placeholder="6:55"
+                        className="w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-1.5 py-0.5 text-right font-mono text-xs"
+                      />
+                    </td>
+                    <td className="whitespace-nowrap px-1 py-1 text-right sm:px-2">
+                      <button
+                        type="button"
+                        onClick={() => saveEdit(s.id)}
+                        disabled={saving}
+                        className="px-1 text-[10px] font-medium text-[var(--foreground)] disabled:opacity-50 sm:text-xs"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(null)}
+                        className="px-1 text-[10px] text-[var(--text-muted)] sm:text-xs"
+                      >
+                        ✕
+                      </button>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr
+                    key={s.id}
+                    className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--background)]"
+                  >
+                    <td className="whitespace-nowrap px-2.5 py-1 text-[var(--text-secondary)] sm:px-3 sm:py-1.5">
+                      {formatDate(s.date)}
+                    </td>
+                    <td className="whitespace-nowrap px-2.5 py-1 text-right font-mono tabular-nums sm:px-3 sm:py-1.5">
+                      {formatSecondsToTime(s.seconds)}
+                    </td>
+                    <td className="whitespace-nowrap px-1 py-1 text-right sm:px-2">
+                      <button
+                        type="button"
+                        onClick={() => startEdit(s)}
+                        className="rounded-md px-1.5 py-0.5 text-[10px] text-[var(--text-muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] sm:text-xs"
+                      >
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                )
+              )}
             </tbody>
           </table>
         </div>
