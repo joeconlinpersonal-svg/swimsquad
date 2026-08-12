@@ -1,4 +1,4 @@
-import type { Distance, SwimmerWithEntries } from "./types";
+import type { Distance, Entry, SwimmerWithEntries } from "./types";
 import { DISTANCES } from "./types";
 
 export function bestEntryFor(swimmer: SwimmerWithEntries, distance: Distance) {
@@ -24,20 +24,38 @@ export function hasProgressData(swimmer: SwimmerWithEntries) {
   return DISTANCES.some((d) => paceHistory(swimmer, d).length >= 1);
 }
 
-export type FlatEntry = SwimmerWithEntries["entries"][number] & {
-  swimmerName: string;
-  colorIndex: number;
+export type ProgressRow = {
+  date: string | null;
+  cells: Partial<Record<Distance, Entry>>;
 };
 
-export function flattenEntries(swimmers: SwimmerWithEntries[]): FlatEntry[] {
+export type SwimmerProgress = {
+  swimmer: SwimmerWithEntries;
+  rows: ProgressRow[];
+};
+
+// One sub-table per swimmer, pivoted so each row is a date and each column a
+// distance — mirrors the original spreadsheet's per-person progress blocks.
+export function groupedProgress(swimmers: SwimmerWithEntries[]): SwimmerProgress[] {
   return swimmers
-    .flatMap((s) =>
-      s.entries.map((e) => ({ ...e, swimmerName: s.name, colorIndex: s.colorIndex }))
-    )
-    .sort((a, b) => {
-      if (a.date && b.date && a.date !== b.date) return a.date < b.date ? 1 : -1;
-      if (a.date && !b.date) return -1;
-      if (!a.date && b.date) return 1;
-      return b.createdAt < a.createdAt ? -1 : 1;
+    .filter((s) => s.entries.length > 0)
+    .map((swimmer) => {
+      const byDate = new Map<string, ProgressRow>();
+      for (const entry of swimmer.entries) {
+        const key = entry.date ?? "__undated__";
+        if (!byDate.has(key)) byDate.set(key, { date: entry.date, cells: {} });
+        const row = byDate.get(key)!;
+        const existing = row.cells[entry.distance];
+        if (!existing || entry.timeSeconds < existing.timeSeconds) {
+          row.cells[entry.distance] = entry;
+        }
+      }
+      const rows = Array.from(byDate.values()).sort((a, b) => {
+        if (a.date && b.date) return a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
+        if (a.date && !b.date) return -1;
+        if (!a.date && b.date) return 1;
+        return 0;
+      });
+      return { swimmer, rows };
     });
 }
