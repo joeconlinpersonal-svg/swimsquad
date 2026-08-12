@@ -1,4 +1,4 @@
-import { neon } from "@neondatabase/serverless";
+import postgres from "postgres";
 import { randomUUID } from "crypto";
 import { SEED_SWIMMERS } from "./seedData";
 import { parseTimeToSeconds } from "./time";
@@ -6,7 +6,13 @@ import { SWIMMER_COLORS, type Entry, type Swimmer, type SwimmerWithEntries } fro
 import type { NewEntryInput, SwimStore } from "./store.types";
 
 const numColors = SWIMMER_COLORS.length;
-const sql = neon(process.env.DATABASE_URL!);
+
+// POSTGRES_URL is the pooled connection string Vercel's Supabase integration sets;
+// DATABASE_URL is honored too in case a different Postgres provider is wired up.
+// prepare: false is required for pooled (pgbouncer/Supavisor) connections in transaction mode.
+const sql = postgres(process.env.DATABASE_URL ?? process.env.POSTGRES_URL!, {
+  prepare: false,
+});
 
 let initPromise: Promise<void> | null = null;
 

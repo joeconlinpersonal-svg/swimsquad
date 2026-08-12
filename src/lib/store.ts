@@ -1,11 +1,11 @@
 import { memoryStore } from "./memoryStore";
 import type { SwimStore } from "./store.types";
 
-// Uses Postgres (Neon) in production once DATABASE_URL is set on Vercel.
+// Uses Postgres (e.g. Supabase, via Vercel's POSTGRES_URL) once configured.
 // Falls back to an in-memory store for local preview so `npm run dev` works
 // with zero setup (state resets on restart in that mode).
 async function getStore(): Promise<SwimStore> {
-  if (process.env.DATABASE_URL) {
+  if (process.env.DATABASE_URL || process.env.POSTGRES_URL) {
     const { pgStore } = await import("./pgStore");
     return pgStore;
   }
