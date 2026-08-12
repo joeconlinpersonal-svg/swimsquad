@@ -1,18 +1,14 @@
 import { NextResponse } from "next/server";
 import { store } from "@/lib/store";
-import type { SetGrid } from "@/lib/types";
+import type { SetRow } from "@/lib/types";
 
-function isValidGrid(grid: unknown): grid is SetGrid {
-  if (!grid || typeof grid !== "object") return false;
-  const g = grid as SetGrid;
-  if (!Array.isArray(g.columns) || !g.columns.every((c) => typeof c === "string")) return false;
-  if (!Array.isArray(g.rows)) return false;
-  return g.rows.every(
+function isValidRows(rows: unknown): rows is SetRow[] {
+  if (!Array.isArray(rows)) return false;
+  return rows.every(
     (r) =>
       r &&
       typeof r.label === "string" &&
-      Array.isArray(r.values) &&
-      r.values.every((v) => v === null || typeof v === "number")
+      (r.distance === null || typeof r.distance === "number")
   );
 }
 
@@ -22,16 +18,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const name = typeof body?.name === "string" ? body.name.trim() : "";
   const date = typeof body?.date === "string" && body.date ? body.date : null;
-  const grid = body?.grid;
+  const rows = body?.rows;
 
   if (!name) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
-  if (!isValidGrid(grid)) {
-    return NextResponse.json({ error: "Invalid grid" }, { status: 400 });
+  if (!isValidRows(rows)) {
+    return NextResponse.json({ error: "Invalid rows" }, { status: 400 });
   }
 
-  const sets = await store.updateSet(id, { name: name.slice(0, 60), date, grid });
+  const sets = await store.updateSet(id, { name: name.slice(0, 60), date, rows });
   return NextResponse.json({ sets });
 }
 

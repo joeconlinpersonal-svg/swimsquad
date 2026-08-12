@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { SEED_SWIMMERS, SEED_WAIT_SESSIONS } from "./seedData";
 import { parseTimeToSeconds } from "./time";
 import {
-  defaultSetGrid,
+  defaultSetRows,
   SWIMMER_COLORS,
   type Entry,
   type Swimmer,
@@ -193,11 +193,11 @@ export const pgStore: SwimStore = {
 
   async getSets() {
     await init();
-    const rows = (await sql`
-      SELECT id, name, date, grid, created_at AS "createdAt" FROM swim_sets
+    const dbRows = (await sql`
+      SELECT id, name, date, grid AS "rows", created_at AS "createdAt" FROM swim_sets
       ORDER BY created_at
     `) as SwimSet[];
-    return rows.map((r) => ({
+    return dbRows.map((r) => ({
       ...r,
       date: r.date ? new Date(r.date).toISOString().slice(0, 10) : null,
     }));
@@ -207,7 +207,7 @@ export const pgStore: SwimStore = {
     await init();
     await sql`
       INSERT INTO swim_sets (id, name, date, grid)
-      VALUES (${randomUUID()}, ${name}, ${null}, ${sql.json(defaultSetGrid())})
+      VALUES (${randomUUID()}, ${name}, ${null}, ${sql.json(defaultSetRows())})
     `;
     return pgStore.getSets();
   },
@@ -216,7 +216,7 @@ export const pgStore: SwimStore = {
     await init();
     await sql`
       UPDATE swim_sets
-      SET name = ${input.name}, date = ${input.date}, grid = ${sql.json(input.grid)}
+      SET name = ${input.name}, date = ${input.date}, grid = ${sql.json(input.rows)}
       WHERE id = ${id}
     `;
     return pgStore.getSets();

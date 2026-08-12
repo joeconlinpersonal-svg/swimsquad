@@ -28,28 +28,29 @@ export type WaitSession = {
   createdAt: string;
 };
 
-export type SetGrid = {
-  columns: string[];
-  rows: { label: string; values: (number | null)[] }[];
+// A set is one ordered list of labeled distances (warm up, drills, main set
+// legs, cool down, ...) with a running total — one card per workout. Doing a
+// side-by-side comparison of a few sets just means creating a few of them.
+export type SetRow = {
+  label: string;
+  distance: number | null;
 };
 
 export type SwimSet = {
   id: string;
   name: string;
   date: string | null;
-  grid: SetGrid;
+  rows: SetRow[];
   createdAt: string;
 };
 
-export function defaultSetGrid(): SetGrid {
-  return {
-    columns: ["1", "2", "3"],
-    rows: [
-      { label: "Warm up", values: [200, 200, 200] },
-      { label: "Main set", values: [null, null, null] },
-      { label: "Cool down", values: [100, 100, 100] },
-    ],
-  };
+export function defaultSetRows(): SetRow[] {
+  return [
+    { label: "Warm up", distance: 200 },
+    { label: "Drill", distance: 100 },
+    { label: "Main set", distance: null },
+    { label: "Cool down", distance: 100 },
+  ];
 }
 
 // Validated categorical palette (light-mode hex) — fixed order, never cycled/reassigned.

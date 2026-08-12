@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { parseTimeToSeconds } from "./time";
 import { SEED_SWIMMERS, SEED_WAIT_SESSIONS } from "./seedData";
 import {
-  defaultSetGrid,
+  defaultSetRows,
   SWIMMER_COLORS,
   type SwimmerWithEntries,
   type SwimSet,
@@ -140,7 +140,7 @@ export const memoryStore: SwimStore = {
       id: randomUUID(),
       name,
       date: null,
-      grid: defaultSetGrid(),
+      rows: defaultSetRows(),
       createdAt: new Date().toISOString(),
     });
     return globalForStore.__setsState!;
@@ -151,7 +151,7 @@ export const memoryStore: SwimStore = {
     if (set) {
       set.name = input.name;
       set.date = input.date;
-      set.grid = input.grid;
+      set.rows = input.rows;
     }
     return globalForStore.__setsState!;
   },

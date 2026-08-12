@@ -1,4 +1,4 @@
-import type { Distance, SetGrid, SwimmerWithEntries, SwimSet, WaitSession } from "./types";
+import type { Distance, SetRow, SwimmerWithEntries, SwimSet, WaitSession } from "./types";
 
 export type NewEntryInput = {
   swimmerId: string;
@@ -17,7 +17,7 @@ export type EntryUpdate = {
 export type SetUpdate = {
   name: string;
   date: string | null;
-  grid: SetGrid;
+  rows: SetRow[];
 };
 
 export interface SwimStore {
