@@ -1,4 +1,4 @@
-import type { Distance, SwimmerWithEntries } from "./types";
+import type { Distance, SwimmerWithEntries, WaitSession } from "./types";
 
 export type NewEntryInput = {
   swimmerId: string;
@@ -12,4 +12,6 @@ export interface SwimStore {
   getSwimmers(): Promise<SwimmerWithEntries[]>;
   addSwimmer(name: string): Promise<SwimmerWithEntries>;
   addEntry(input: NewEntryInput): Promise<SwimmerWithEntries[]>;
+  getWaitSessions(): Promise<WaitSession[]>;
+  addWaitSession(seconds: number, date: string): Promise<WaitSession[]>;
 }

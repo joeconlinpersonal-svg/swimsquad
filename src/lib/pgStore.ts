@@ -1,8 +1,14 @@
 import postgres from "postgres";
 import { randomUUID } from "crypto";
-import { SEED_SWIMMERS } from "./seedData";
+import { SEED_SWIMMERS, SEED_WAIT_SESSIONS } from "./seedData";
 import { parseTimeToSeconds } from "./time";
-import { SWIMMER_COLORS, type Entry, type Swimmer, type SwimmerWithEntries } from "./types";
+import {
+  SWIMMER_COLORS,
+  type Entry,
+  type Swimmer,
+  type SwimmerWithEntries,
+  type WaitSession,
+} from "./types";
 import type { NewEntryInput, SwimStore } from "./store.types";
 
 const numColors = SWIMMER_COLORS.length;
@@ -37,6 +43,15 @@ async function ensureSchema() {
     )
   `;
 
+  await sql`
+    CREATE TABLE IF NOT EXISTS wait_sessions (
+      id UUID PRIMARY KEY,
+      seconds NUMERIC NOT NULL,
+      date DATE NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+
   const [{ count }] = (await sql`SELECT COUNT(*)::int AS count FROM swimmers`) as {
     count: number;
   }[];
@@ -55,6 +70,18 @@ async function ensureSchema() {
           VALUES (${randomUUID()}, ${swimmerId}, ${entry.distance}, ${seconds}, ${entry.date}, ${entry.note ?? null})
         `;
       }
+    }
+  }
+
+  const [{ count: waitCount }] = (await sql`
+    SELECT COUNT(*)::int AS count FROM wait_sessions
+  `) as { count: number }[];
+
+  if (waitCount === 0) {
+    for (const w of SEED_WAIT_SESSIONS) {
+      await sql`
+        INSERT INTO wait_sessions (id, seconds, date) VALUES (${randomUUID()}, ${w.seconds}, ${w.date})
+      `;
     }
   }
 }
@@ -115,5 +142,24 @@ export const pgStore: SwimStore = {
       VALUES (${randomUUID()}, ${input.swimmerId}, ${input.distance}, ${input.timeSeconds}, ${input.date}, ${input.note ?? null})
     `;
     return loadAll();
+  },
+
+  async getWaitSessions() {
+    await init();
+    const rows = (await sql`
+      SELECT id, seconds, date, created_at AS "createdAt" FROM wait_sessions
+      ORDER BY date, created_at
+    `) as WaitSession[];
+    return rows.map((r) => ({
+      ...r,
+      seconds: Number(r.seconds),
+      date: new Date(r.date).toISOString().slice(0, 10),
+    }));
+  },
+
+  async addWaitSession(seconds: number, date: string) {
+    await init();
+    await sql`INSERT INTO wait_sessions (id, seconds, date) VALUES (${randomUUID()}, ${seconds}, ${date})`;
+    return pgStore.getWaitSessions();
   },
 };

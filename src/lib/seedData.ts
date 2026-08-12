@@ -81,6 +81,12 @@ export const SEED_SWIMMERS: SeedSwimmer[] = [
   },
 ];
 
+export type SeedWaitSession = { seconds: number; date: string };
+
+export const SEED_WAIT_SESSIONS: SeedWaitSession[] = [
+  { seconds: 6 * 60 + 55, date: "2026-08-11" },
+];
+
 export function validateSeed() {
   for (const swimmer of SEED_SWIMMERS) {
     for (const entry of swimmer.entries) {

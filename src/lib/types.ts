@@ -21,6 +21,13 @@ export type SwimmerWithEntries = Swimmer & {
   entries: Entry[];
 };
 
+export type WaitSession = {
+  id: string;
+  seconds: number;
+  date: string; // ISO date
+  createdAt: string;
+};
+
 // Validated categorical palette (light-mode hex) — fixed order, never cycled/reassigned.
 export const SWIMMER_COLORS = [
   "#2a78d6", // blue

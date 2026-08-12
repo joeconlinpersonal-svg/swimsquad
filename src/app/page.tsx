@@ -4,10 +4,13 @@ import { store } from "@/lib/store";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const swimmers = await store.getSwimmers();
+  const [swimmers, waitSessions] = await Promise.all([
+    store.getSwimmers(),
+    store.getWaitSessions(),
+  ]);
   return (
     <div className="min-h-full bg-[var(--background)]">
-      <Dashboard initial={swimmers} />
+      <Dashboard initial={swimmers} initialWaitSessions={waitSessions} />
     </div>
   );
 }

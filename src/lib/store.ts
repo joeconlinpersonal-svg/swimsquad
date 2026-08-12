@@ -22,4 +22,10 @@ export const store: SwimStore = {
   async addEntry(input) {
     return (await getStore()).addEntry(input);
   },
+  async getWaitSessions() {
+    return (await getStore()).getWaitSessions();
+  },
+  async addWaitSession(seconds, date) {
+    return (await getStore()).addWaitSession(seconds, date);
+  },
 };

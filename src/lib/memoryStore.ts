@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { parseTimeToSeconds } from "./time";
-import { SEED_SWIMMERS } from "./seedData";
-import { SWIMMER_COLORS, type SwimmerWithEntries } from "./types";
+import { SEED_SWIMMERS, SEED_WAIT_SESSIONS } from "./seedData";
+import { SWIMMER_COLORS, type SwimmerWithEntries, type WaitSession } from "./types";
 import type { NewEntryInput, SwimStore } from "./store.types";
 
 const numColors = SWIMMER_COLORS.length;
@@ -29,9 +29,25 @@ function buildInitialState(): SwimmerWithEntries[] {
   }));
 }
 
-const globalForStore = globalThis as unknown as { __swimState?: SwimmerWithEntries[] };
+function buildInitialWaitSessions(): WaitSession[] {
+  const now = new Date().toISOString();
+  return SEED_WAIT_SESSIONS.map((w) => ({
+    id: randomUUID(),
+    seconds: w.seconds,
+    date: w.date,
+    createdAt: now,
+  }));
+}
+
+const globalForStore = globalThis as unknown as {
+  __swimState?: SwimmerWithEntries[];
+  __waitState?: WaitSession[];
+};
 if (!globalForStore.__swimState) {
   globalForStore.__swimState = buildInitialState();
+}
+if (!globalForStore.__waitState) {
+  globalForStore.__waitState = buildInitialWaitSessions();
 }
 
 export const memoryStore: SwimStore = {
@@ -67,5 +83,19 @@ export const memoryStore: SwimStore = {
       createdAt: new Date().toISOString(),
     });
     return globalForStore.__swimState!;
+  },
+
+  async getWaitSessions() {
+    return globalForStore.__waitState!;
+  },
+
+  async addWaitSession(seconds: number, date: string) {
+    globalForStore.__waitState!.push({
+      id: randomUUID(),
+      seconds,
+      date,
+      createdAt: new Date().toISOString(),
+    });
+    return globalForStore.__waitState!;
   },
 };

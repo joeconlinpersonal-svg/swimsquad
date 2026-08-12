@@ -5,10 +5,17 @@ import SwimmerCard from "./SwimmerCard";
 import TrendChart from "./TrendChart";
 import ProgressTable from "./ProgressTable";
 import AddEntryModal from "./AddEntryModal";
+import WaitTracker from "./WaitTracker";
 import { paceHistory } from "@/lib/stats";
-import { DISTANCES, type SwimmerWithEntries } from "@/lib/types";
+import { DISTANCES, type SwimmerWithEntries, type WaitSession } from "@/lib/types";
 
-export default function Dashboard({ initial }: { initial: SwimmerWithEntries[] }) {
+export default function Dashboard({
+  initial,
+  initialWaitSessions,
+}: {
+  initial: SwimmerWithEntries[];
+  initialWaitSessions: WaitSession[];
+}) {
   const [swimmers, setSwimmers] = useState(initial);
   const [modalSwimmerId, setModalSwimmerId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -102,6 +109,8 @@ export default function Dashboard({ initial }: { initial: SwimmerWithEntries[] }
           ))}
         </div>
       </section>
+
+      <WaitTracker initial={initialWaitSessions} />
 
       {modalOpen && (
         <AddEntryModal

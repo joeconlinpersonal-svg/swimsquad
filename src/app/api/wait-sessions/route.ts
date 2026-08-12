@@ -1,0 +1,23 @@
+import { NextResponse } from "next/server";
+import { store } from "@/lib/store";
+
+export async function GET() {
+  const sessions = await store.getWaitSessions();
+  return NextResponse.json({ sessions });
+}
+
+export async function POST(request: Request) {
+  const body = await request.json().catch(() => null);
+  const seconds = Number(body?.seconds);
+  const date = typeof body?.date === "string" && body.date ? body.date : null;
+
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return NextResponse.json({ error: "Invalid duration" }, { status: 400 });
+  }
+  if (!date) {
+    return NextResponse.json({ error: "Date is required" }, { status: 400 });
+  }
+
+  const sessions = await store.addWaitSession(Math.round(seconds), date);
+  return NextResponse.json({ sessions });
+}
