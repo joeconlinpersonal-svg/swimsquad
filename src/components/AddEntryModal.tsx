@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { DISTANCES, type SwimmerWithEntries } from "@/lib/types";
 
+const INTERVAL_OPTIONS = ["@1:00", "@1:30", "@2:00", "@2:30", "@3:00", "@3:30", "@4:00"];
+const SHORT_DISTANCES = new Set([50, 100, 200]);
+
 type Props = {
   swimmers: SwimmerWithEntries[];
   initialSwimmerId: string | null;
@@ -146,7 +149,10 @@ export default function AddEntryModal({ swimmers, initialSwimmerId, onClose, onS
               <button
                 type="button"
                 key={d}
-                onClick={() => setDistance(d)}
+                onClick={() => {
+                  setDistance(d);
+                  setNote("");
+                }}
                 className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                   distance === d
                     ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]"
@@ -185,17 +191,52 @@ export default function AddEntryModal({ swimmers, initialSwimmerId, onClose, onS
           </div>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-[var(--text-secondary)]">
-            Note (optional)
-          </label>
-          <input
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="e.g. @ 2:00 send-off"
-            className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-2.5 py-1.5 text-sm"
-          />
-        </div>
+        {SHORT_DISTANCES.has(distance) ? (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-[var(--text-secondary)]">
+              Interval (optional)
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setNote("")}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  note === ""
+                    ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]"
+                    : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--background)]"
+                }`}
+              >
+                None
+              </button>
+              {INTERVAL_OPTIONS.map((interval) => (
+                <button
+                  type="button"
+                  key={interval}
+                  onClick={() => setNote(interval)}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                    note === interval
+                      ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]"
+                      : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--background)]"
+                  }`}
+                >
+                  {interval}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-[var(--text-secondary)]">
+              Note (optional)
+            </label>
+            <input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="e.g. felt strong on the back half"
+              className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-2.5 py-1.5 text-sm"
+            />
+          </div>
+        )}
 
         {error && <p className="text-xs text-[#e34948]">{error}</p>}
 
