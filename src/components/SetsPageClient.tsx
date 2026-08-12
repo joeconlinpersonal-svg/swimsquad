@@ -51,6 +51,20 @@ export default function SetsPageClient({ initial }: { initial: SwimSet[] }) {
         </Link>
       </header>
 
+      {sets.length === 0 ? (
+        <div className="flex h-24 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--text-muted)]">
+          No sets yet — create one below.
+        </div>
+      ) : (
+        <div className="flex items-start gap-3 overflow-x-auto pb-2">
+          {sets.map((set) => (
+            <SetEditor key={set.id} set={set} onUpdated={setSets} onDeleted={setSets} />
+          ))}
+        </div>
+      )}
+
+      {error && <p className="text-xs text-[#e34948]">{error}</p>}
+
       <form
         onSubmit={handleCreate}
         className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3"
@@ -69,20 +83,6 @@ export default function SetsPageClient({ initial }: { initial: SwimSet[] }) {
           + New set
         </button>
       </form>
-
-      {error && <p className="text-xs text-[#e34948]">{error}</p>}
-
-      {sets.length === 0 ? (
-        <div className="flex h-32 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--text-muted)]">
-          No sets yet — create one above.
-        </div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {sets.map((set) => (
-            <SetEditor key={set.id} set={set} onUpdated={setSets} onDeleted={setSets} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
