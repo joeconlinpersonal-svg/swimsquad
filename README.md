@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Squad Swim Tracker
 
-## Getting Started
+A small shareable dashboard for the squad's swim times: 50/100/200/400/1000m
+PBs per swimmer, and pace-over-time charts for 400m and 1000m. Anyone with the
+link can log a new swim.
 
-First, run the development server:
+## Local development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000. With no `DATABASE_URL` set, the app runs on an
+in-memory store seeded from the squad's original spreadsheet — good for
+poking around, but it resets whenever the server restarts.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploying to Vercel (free plan)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Push this repo to GitHub** (or GitLab/Bitbucket).
+2. **Import it into Vercel**: [vercel.com/new](https://vercel.com/new) → select the repo → Deploy.
+   It'll build fine with no database configured, but data won't persist between
+   requests in production — do step 3 before sharing the link.
+3. **Add a free Postgres database**: in the Vercel project → **Storage** tab →
+   **Create Database** → choose **Neon** (Postgres) → free tier → connect it
+   to this project. Vercel will automatically set a `DATABASE_URL` (or
+   `POSTGRES_URL`/`DATABASE_URL`-style) environment variable — if it names the
+   variable something other than `DATABASE_URL`, add a `DATABASE_URL` env var
+   in **Settings → Environment Variables** pointing to the same connection
+   string.
+4. **Redeploy** (Vercel does this automatically after the database connects).
+   The first request creates the `swimmers`/`entries` tables and seeds them
+   from the original spreadsheet automatically — no migration step needed.
+5. Share the Vercel URL with the squad. Anyone can hit **+ Log a swim** to add
+   a new time (existing swimmer or a new one), and everyone sees the same
+   shared data.
 
-## Learn More
+## How it's structured
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `src/lib/seedData.ts` — the original spreadsheet data, transcribed.
+- `src/lib/pgStore.ts` / `src/lib/memoryStore.ts` — the two storage
+  backends behind a shared `SwimStore` interface (`src/lib/store.ts` picks
+  Postgres when `DATABASE_URL` is set, otherwise the in-memory fallback).
+- `src/app/api/swimmers`, `src/app/api/entries` — the two API routes (list/add
+  swimmer, add a timed swim).
+- `src/components/Dashboard.tsx` — the page: trend charts + swimmer cards +
+  the add-swim modal.
