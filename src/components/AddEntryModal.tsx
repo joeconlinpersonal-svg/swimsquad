@@ -21,6 +21,7 @@ export default function AddEntryModal({ swimmers, initialSwimmerId, onClose, onS
   const [time, setTime] = useState("");
   const [date, setDate] = useState("");
   const [note, setNote] = useState("");
+  const [customInterval, setCustomInterval] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -152,6 +153,7 @@ export default function AddEntryModal({ swimmers, initialSwimmerId, onClose, onS
                 onClick={() => {
                   setDistance(d);
                   setNote("");
+                  setCustomInterval(false);
                 }}
                 className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                   distance === d
@@ -199,9 +201,12 @@ export default function AddEntryModal({ swimmers, initialSwimmerId, onClose, onS
             <div className="flex flex-wrap gap-1.5">
               <button
                 type="button"
-                onClick={() => setNote("")}
+                onClick={() => {
+                  setNote("");
+                  setCustomInterval(false);
+                }}
                 className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                  note === ""
+                  !customInterval && note === ""
                     ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]"
                     : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--background)]"
                 }`}
@@ -212,9 +217,12 @@ export default function AddEntryModal({ swimmers, initialSwimmerId, onClose, onS
                 <button
                   type="button"
                   key={interval}
-                  onClick={() => setNote(interval)}
+                  onClick={() => {
+                    setNote(interval);
+                    setCustomInterval(false);
+                  }}
                   className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                    note === interval
+                    !customInterval && note === interval
                       ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]"
                       : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--background)]"
                   }`}
@@ -222,7 +230,34 @@ export default function AddEntryModal({ swimmers, initialSwimmerId, onClose, onS
                   {interval}
                 </button>
               ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomInterval(true);
+                  setNote((n) => (INTERVAL_OPTIONS.includes(n) ? "" : n));
+                }}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  customInterval
+                    ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]"
+                    : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--background)]"
+                }`}
+              >
+                Custom
+              </button>
             </div>
+            {customInterval && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm text-[var(--text-secondary)]">@</span>
+                <input
+                  autoFocus
+                  value={note.replace(/^@/, "")}
+                  onChange={(e) => setNote(e.target.value ? `@${e.target.value}` : "")}
+                  placeholder="1:15"
+                  className="w-24 rounded-lg border border-[var(--border)] bg-[var(--background)] px-2.5 py-1.5 text-sm font-mono"
+                />
+                <span className="text-xs text-[var(--text-muted)]">send-off interval</span>
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex flex-col gap-1.5">

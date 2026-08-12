@@ -46,9 +46,20 @@ export default function TrendChart({ swimmers, distance }: Props) {
     return row;
   });
 
+  // Zoom the axis to the actual spread of the data (padded) rather than
+  // starting at 0 — otherwise small, meaningful differences between
+  // swimmers get compressed into a sliver at the top of the chart.
+  const allValues = rows.flatMap((r) =>
+    withHistory.map((s) => r[s.name]).filter((v): v is number => typeof v === "number")
+  );
+  const dataMin = Math.min(...allValues);
+  const dataMax = Math.max(...allValues);
+  const padding = Math.max((dataMax - dataMin) * 0.15, 2);
+  const domain: [number, number] = [Math.max(0, dataMin - padding), dataMax + padding];
+
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-      <ResponsiveContainer width="100%" height={240}>
+      <ResponsiveContainer width="100%" height={260}>
         <LineChart data={rows} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
           <CartesianGrid stroke="var(--gridline)" vertical={false} />
           <XAxis
@@ -59,13 +70,19 @@ export default function TrendChart({ swimmers, distance }: Props) {
             tickLine={false}
           />
           <YAxis
+            // Reversed so faster times (lower seconds) sit higher on the
+            // chart — "up" reads as "faster / improving", matching how
+            // everything else on the page (and the eye) expects progress
+            // charts to behave.
+            reversed
+            domain={domain}
             tickFormatter={(v: number) => formatSecondsToTime(v)}
             stroke="var(--baseline)"
             tick={{ fill: "var(--text-muted)", fontSize: 12 }}
             tickLine={false}
-            width={48}
+            width={52}
             label={{
-              value: "min/100",
+              value: "faster ↑",
               angle: -90,
               position: "insideLeft",
               fill: "var(--text-muted)",
@@ -80,7 +97,7 @@ export default function TrendChart({ swimmers, distance }: Props) {
               fontSize: 13,
             }}
             labelFormatter={(d) => formatDate(String(d))}
-            formatter={(value) => formatSecondsToTime(Number(value))}
+            formatter={(value) => [`${formatSecondsToTime(Number(value))} /100`]}
           />
           <Legend wrapperStyle={{ fontSize: 12, color: "var(--text-secondary)" }} />
           {withHistory.map((s) => (
@@ -91,6 +108,7 @@ export default function TrendChart({ swimmers, distance }: Props) {
               stroke={seriesColorVar(s.colorIndex)}
               strokeWidth={2}
               dot={{ r: 4 }}
+              activeDot={{ r: 6 }}
               connectNulls
             />
           ))}
