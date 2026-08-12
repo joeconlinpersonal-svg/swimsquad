@@ -23,12 +23,12 @@ type Props = {
 type Row = { date: string } & Record<string, number | string>;
 
 export default function TrendChart({ swimmers, distance }: Props) {
-  const withHistory = swimmers.filter((s) => paceHistory(s, distance).length >= 2);
+  const withHistory = swimmers.filter((s) => paceHistory(s, distance).length >= 1);
 
   if (!withHistory.length) {
     return (
       <div className="flex h-56 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--text-muted)]">
-        Log at least two dated {distance}m swims for someone to see a trend here.
+        No dated {distance}m swims logged yet.
       </div>
     );
   }

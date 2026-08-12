@@ -21,5 +21,23 @@ export function paceHistory(swimmer: SwimmerWithEntries, distance: Distance) {
 }
 
 export function hasProgressData(swimmer: SwimmerWithEntries) {
-  return DISTANCES.some((d) => paceHistory(swimmer, d).length >= 2);
+  return DISTANCES.some((d) => paceHistory(swimmer, d).length >= 1);
+}
+
+export type FlatEntry = SwimmerWithEntries["entries"][number] & {
+  swimmerName: string;
+  colorIndex: number;
+};
+
+export function flattenEntries(swimmers: SwimmerWithEntries[]): FlatEntry[] {
+  return swimmers
+    .flatMap((s) =>
+      s.entries.map((e) => ({ ...e, swimmerName: s.name, colorIndex: s.colorIndex }))
+    )
+    .sort((a, b) => {
+      if (a.date && b.date && a.date !== b.date) return a.date < b.date ? 1 : -1;
+      if (a.date && !b.date) return -1;
+      if (!a.date && b.date) return 1;
+      return b.createdAt < a.createdAt ? -1 : 1;
+    });
 }

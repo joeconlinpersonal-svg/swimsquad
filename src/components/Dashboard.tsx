@@ -1,17 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import SwimmerCard from "./SwimmerCard";
 import TrendChart from "./TrendChart";
+import ProgressTable from "./ProgressTable";
 import AddEntryModal from "./AddEntryModal";
-import type { SwimmerWithEntries } from "@/lib/types";
+import { paceHistory } from "@/lib/stats";
+import { DISTANCES, type SwimmerWithEntries } from "@/lib/types";
 
 export default function Dashboard({ initial }: { initial: SwimmerWithEntries[] }) {
   const [swimmers, setSwimmers] = useState(initial);
   const [modalSwimmerId, setModalSwimmerId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [filterId, setFilterId] = useState<string>("all");
 
   const totalSwims = swimmers.reduce((n, s) => n + s.entries.length, 0);
+
+  const filtered = useMemo(
+    () => (filterId === "all" ? swimmers : swimmers.filter((s) => s.id === filterId)),
+    [swimmers, filterId]
+  );
+
+  const distancesWithData = DISTANCES.filter((d) =>
+    filtered.some((s) => paceHistory(s, d).length >= 1)
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6">
@@ -34,21 +46,51 @@ export default function Dashboard({ initial }: { initial: SwimmerWithEntries[] }
         </button>
       </header>
 
+      <div className="flex items-center gap-2">
+        <label htmlFor="swimmer-filter" className="text-sm text-[var(--text-secondary)]">
+          Show
+        </label>
+        <select
+          id="swimmer-filter"
+          value={filterId}
+          onChange={(e) => setFilterId(e.target.value)}
+          className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-sm"
+        >
+          <option value="all">All swimmers</option>
+          {swimmers.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-semibold text-[var(--text-secondary)]">
-          Pace trends · 400m
-        </h2>
-        <TrendChart swimmers={swimmers} distance={400} />
-        <h2 className="mt-2 text-sm font-semibold text-[var(--text-secondary)]">
-          Pace trends · 1000m
-        </h2>
-        <TrendChart swimmers={swimmers} distance={1000} />
+        <h2 className="text-sm font-semibold text-[var(--text-secondary)]">Progress over time</h2>
+        <ProgressTable swimmers={filtered} />
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <h2 className="text-sm font-semibold text-[var(--text-secondary)]">Trend graphs</h2>
+        {distancesWithData.length === 0 && (
+          <div className="flex h-32 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--text-muted)]">
+            No dated swims yet — add a date when logging a swim to see it charted here.
+          </div>
+        )}
+        {distancesWithData.map((distance) => (
+          <div key={distance} className="flex flex-col gap-2">
+            <h3 className="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
+              {distance}m pace
+            </h3>
+            <TrendChart swimmers={filtered} distance={distance} />
+          </div>
+        ))}
       </section>
 
       <section className="flex flex-col gap-4">
         <h2 className="text-sm font-semibold text-[var(--text-secondary)]">Swimmers</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {swimmers.map((s) => (
+          {filtered.map((s) => (
             <SwimmerCard
               key={s.id}
               swimmer={s}
