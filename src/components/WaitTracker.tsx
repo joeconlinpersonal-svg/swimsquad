@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   Bar,
   BarChart,
@@ -23,52 +23,45 @@ function todayISO() {
   return new Date(d.getTime() - offset * 60000).toISOString().slice(0, 10);
 }
 
-function secondsToInput(totalSeconds: number): string {
-  const s = Math.round(totalSeconds);
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+function parseInputTime(input: string): number | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  const parts = trimmed.split(":").map(Number);
+  if (parts.some((p) => Number.isNaN(p))) return null;
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  if (parts.length === 1) return parts[0];
+  return null;
 }
 
 export default function WaitTracker({ initial }: Props) {
   const [sessions, setSessions] = useState(initial);
-  const [running, setRunning] = useState(false);
-  const [elapsedMs, setElapsedMs] = useState(0);
+  const [newTime, setNewTime] = useState("");
+  const [newDate, setNewDate] = useState(todayISO());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTime, setEditTime] = useState("");
   const [editDate, setEditDate] = useState("");
-  const startRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    if (!running) return;
-    const interval = setInterval(() => {
-      setElapsedMs(Date.now() - (startRef.current ?? Date.now()));
-    }, 100);
-    return () => clearInterval(interval);
-  }, [running]);
-
-  function handleStart() {
-    startRef.current = Date.now();
-    setElapsedMs(0);
-    setRunning(true);
-    setError(null);
-  }
-
-  async function handleStop() {
-    if (startRef.current === null) return;
-    const seconds = (Date.now() - startRef.current) / 1000;
-    startRef.current = null;
-    setRunning(false);
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    const seconds = parseInputTime(newTime);
+    if (seconds === null || seconds <= 0) {
+      setError("Enter a time like 6:55");
+      return;
+    }
     setSaving(true);
+    setError(null);
     try {
       const res = await fetch("/api/wait-sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ seconds, date: todayISO() }),
+        body: JSON.stringify({ seconds, date: newDate }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not save session");
       setSessions(data.sessions);
+      setNewTime("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -78,16 +71,19 @@ export default function WaitTracker({ initial }: Props) {
 
   function startEdit(s: WaitSession) {
     setEditingId(s.id);
-    setEditTime(secondsToInput(s.seconds));
+    setEditTime(formatSecondsToTime(s.seconds));
     setEditDate(s.date);
   }
 
   async function saveEdit(id: string) {
+    const seconds = parseInputTime(editTime);
+    if (seconds === null || seconds <= 0) {
+      setError("Enter a time like 6:55");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
-      const [m, s] = editTime.split(":").map(Number);
-      const seconds = (m || 0) * 60 + (s || 0);
       const res = await fetch(`/api/wait-sessions/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -131,10 +127,7 @@ export default function WaitTracker({ initial }: Props) {
         </h2>
       </div>
 
-      <div className="flex flex-col items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:flex-row sm:justify-between">
-        <div className="font-mono text-3xl tabular-nums sm:text-4xl">
-          {formatSecondsToTime(running ? elapsedMs / 1000 : 0)}
-        </div>
+      <div className="flex flex-col gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4 sm:gap-6">
           <div className="text-center">
             <div className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] sm:text-xs">
@@ -159,22 +152,28 @@ export default function WaitTracker({ initial }: Props) {
             <div className="font-mono text-base tabular-nums sm:text-lg">{sessions.length}</div>
           </div>
         </div>
-        {!running ? (
+
+        <form onSubmit={handleAdd} className="flex flex-wrap items-center gap-2">
+          <input
+            type="date"
+            value={newDate}
+            onChange={(e) => setNewDate(e.target.value)}
+            className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-2.5 py-1.5 text-sm"
+          />
+          <input
+            value={newTime}
+            onChange={(e) => setNewTime(e.target.value)}
+            placeholder="6:55"
+            className="w-20 rounded-lg border border-[var(--border)] bg-[var(--background)] px-2.5 py-1.5 text-sm font-mono"
+          />
           <button
-            onClick={handleStart}
+            type="submit"
             disabled={saving}
-            className="w-full rounded-full bg-[var(--foreground)] px-5 py-2 text-sm font-medium text-[var(--background)] disabled:opacity-50 sm:w-auto"
+            className="rounded-full bg-[var(--foreground)] px-4 py-1.5 text-sm font-medium text-[var(--background)] disabled:opacity-50"
           >
-            Start
+            + Add
           </button>
-        ) : (
-          <button
-            onClick={handleStop}
-            className="w-full rounded-full bg-[#e34948] px-5 py-2 text-sm font-medium text-white sm:w-auto"
-          >
-            Stop
-          </button>
-        )}
+        </form>
       </div>
 
       {error && <p className="text-xs text-[#e34948]">{error}</p>}
