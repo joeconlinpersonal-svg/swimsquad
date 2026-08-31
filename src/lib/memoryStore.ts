@@ -3,6 +3,7 @@ import { parseTimeToSeconds } from "./time";
 import { SEED_SWIMMERS, SEED_WAIT_SESSIONS } from "./seedData";
 import {
   defaultLanes,
+  sortLanes,
   SWIMMER_COLORS,
   type SetLane,
   type SwimmerWithEntries,
@@ -133,7 +134,7 @@ export const memoryStore: SwimStore = {
   },
 
   async getWeekSets() {
-    return globalForStore.__weekSetsState!;
+    return globalForStore.__weekSetsState!.map((w) => ({ ...w, lanes: sortLanes(w.lanes) }));
   },
 
   async createWeekSet(weekOf: string, copyFromWeekOf: string | null) {

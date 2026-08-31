@@ -65,6 +65,21 @@ export function defaultLanes(): SetLane[] {
   return DEFAULT_LANE_NAMES.map((name) => ({ name, rows: defaultLaneRows() }));
 }
 
+// The three regular lanes always sort first, in their usual order (Postgres
+// JSONB doesn't preserve object/array insertion order reliably, so this is
+// re-applied on every read rather than trusted from storage); any extra
+// lanes keep their existing relative order after that.
+export function sortLanes(lanes: SetLane[]): SetLane[] {
+  return [...lanes].sort((a, b) => {
+    const ai = DEFAULT_LANE_NAMES.indexOf(a.name);
+    const bi = DEFAULT_LANE_NAMES.indexOf(b.name);
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+    return 0;
+  });
+}
+
 // Pure calendar-date arithmetic, anchored in UTC so it never drifts with the
 // host's or browser's local time zone — every date here is a plain
 // yyyy-mm-dd string, not an instant.

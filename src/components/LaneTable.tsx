@@ -39,7 +39,7 @@ export default function LaneTable({ lane, mode, onChange, onRemoveLane }: Props)
   }
 
   return (
-    <div className="flex w-56 shrink-0 flex-col gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2.5">
+    <div className="flex w-full flex-col gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2.5 sm:w-56 sm:shrink-0">
       {mode === "edit" ? (
         <div className="flex items-center gap-1">
           <input

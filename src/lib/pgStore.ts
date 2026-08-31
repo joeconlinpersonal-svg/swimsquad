@@ -5,6 +5,7 @@ import { parseTimeToSeconds } from "./time";
 import {
   DEFAULT_LANE_NAMES,
   defaultLanes,
+  sortLanes,
   SWIMMER_COLORS,
   type Entry,
   type SetLane,
@@ -256,6 +257,7 @@ export const pgStore: SwimStore = {
     return rows.map((r) => ({
       ...r,
       weekOf: new Date(r.weekOf).toISOString().slice(0, 10),
+      lanes: sortLanes(r.lanes),
     }));
   },
 

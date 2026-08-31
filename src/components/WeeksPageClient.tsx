@@ -278,7 +278,7 @@ export default function WeeksPageClient({ initial }: { initial: WeekSet[] }) {
                 )}
               </div>
 
-              <div className="flex items-start gap-3 overflow-x-auto pb-2">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:overflow-x-auto sm:pb-2">
                 {displayLanes &&
                   displayLanes.map((lane, i) => (
                     <LaneTable
@@ -295,7 +295,7 @@ export default function WeeksPageClient({ initial }: { initial: WeekSet[] }) {
                   <button
                     type="button"
                     onClick={addLane}
-                    className="flex w-56 shrink-0 items-center justify-center rounded-xl border border-dashed border-[var(--border)] p-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface)]"
+                    className="flex w-full items-center justify-center rounded-xl border border-dashed border-[var(--border)] p-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface)] sm:w-56 sm:shrink-0"
                   >
                     + Lane
                   </button>
