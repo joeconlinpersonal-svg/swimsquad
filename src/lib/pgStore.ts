@@ -140,6 +140,18 @@ async function ensureSchema() {
       `;
     }
   }
+
+  // A second-generation migration: week_sets briefly stored `lanes` as a
+  // {laneName: rows[]} object (fixed 3 lanes). Convert any rows still in
+  // that shape to the current SetLane[] array so lanes can be added/removed.
+  const oldShapeRows = (await sql`
+    SELECT id, lanes FROM week_sets WHERE jsonb_typeof(lanes) = 'object'
+  `) as { id: string; lanes: Record<string, SetRow[]> }[];
+
+  for (const row of oldShapeRows) {
+    const lanes: SetLane[] = Object.entries(row.lanes).map(([name, rows]) => ({ name, rows }));
+    await sql`UPDATE week_sets SET lanes = ${sql.json(lanes)} WHERE id = ${row.id}`;
+  }
 }
 
 function init() {
