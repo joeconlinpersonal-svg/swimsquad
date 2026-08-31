@@ -54,3 +54,13 @@ export function formatDateShort(iso: string | null): string {
   if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 }
+
+// Today's date (and hour) in the caller's local time zone, as a plain ISO
+// date — deliberately not derived from toISOString() on a mutated Date,
+// which silently shifts by the host's UTC offset.
+export function localToday(): { iso: string; hour: number } {
+  const d = new Date();
+  const offset = d.getTimezoneOffset();
+  const localMidnightUTC = new Date(d.getTime() - offset * 60000);
+  return { iso: localMidnightUTC.toISOString().slice(0, 10), hour: d.getHours() };
+}

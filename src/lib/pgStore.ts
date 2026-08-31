@@ -3,15 +3,18 @@ import { randomUUID } from "crypto";
 import { SEED_SWIMMERS, SEED_WAIT_SESSIONS } from "./seedData";
 import { parseTimeToSeconds } from "./time";
 import {
-  defaultSetRows,
+  emptyLanes,
+  LANES,
   SWIMMER_COLORS,
   type Entry,
+  type Lane,
+  type SetRow,
   type Swimmer,
   type SwimmerWithEntries,
-  type SwimSet,
   type WaitSession,
+  type WeekSet,
 } from "./types";
-import type { EntryUpdate, NewEntryInput, SetUpdate, SwimStore } from "./store.types";
+import type { EntryUpdate, NewEntryInput, SwimStore } from "./store.types";
 
 const numColors = SWIMMER_COLORS.length;
 
@@ -54,6 +57,8 @@ async function ensureSchema() {
     )
   `;
 
+  // Legacy table from the pre-week Set Builder — kept only so migration below
+  // has something to read from on an existing database; no longer written to.
   await sql`
     CREATE TABLE IF NOT EXISTS swim_sets (
       id UUID PRIMARY KEY,
@@ -61,6 +66,16 @@ async function ensureSchema() {
       date DATE,
       grid JSONB NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS week_sets (
+      id UUID PRIMARY KEY,
+      week_of DATE UNIQUE NOT NULL,
+      lanes JSONB NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
   `;
 
@@ -93,6 +108,34 @@ async function ensureSchema() {
     for (const w of SEED_WAIT_SESSIONS) {
       await sql`
         INSERT INTO wait_sessions (id, seconds, date) VALUES (${randomUUID()}, ${w.seconds}, ${w.date})
+      `;
+    }
+  }
+
+  // One-time migration: the old Set Builder stored one row per lane per
+  // week (name = lane, date = that Tuesday). Fold any such rows into
+  // week_sets so real data already entered isn't lost.
+  const [{ count: weekCount }] = (await sql`
+    SELECT COUNT(*)::int AS count FROM week_sets
+  `) as { count: number }[];
+
+  if (weekCount === 0) {
+    const legacyRows = (await sql`
+      SELECT name, date, grid FROM swim_sets WHERE date IS NOT NULL
+    `) as { name: string; date: string; grid: SetRow[] }[];
+
+    const byWeek = new Map<string, Record<Lane, SetRow[]>>();
+    for (const row of legacyRows) {
+      const weekOf = new Date(row.date).toISOString().slice(0, 10);
+      if (!LANES.includes(row.name as Lane)) continue;
+      const lanes = byWeek.get(weekOf) ?? emptyLanes();
+      lanes[row.name as Lane] = row.grid;
+      byWeek.set(weekOf, lanes);
+    }
+
+    for (const [weekOf, lanes] of byWeek) {
+      await sql`
+        INSERT INTO week_sets (id, week_of, lanes) VALUES (${randomUUID()}, ${weekOf}, ${sql.json(lanes)})
       `;
     }
   }
@@ -191,40 +234,49 @@ export const pgStore: SwimStore = {
     return pgStore.getWaitSessions();
   },
 
-  async getSets() {
+  async getWeekSets() {
     await init();
-    const dbRows = (await sql`
-      SELECT id, name, date, grid AS "rows", created_at AS "createdAt" FROM swim_sets
-      ORDER BY created_at
-    `) as SwimSet[];
-    return dbRows.map((r) => ({
+    const rows = (await sql`
+      SELECT id, week_of AS "weekOf", lanes, created_at AS "createdAt", updated_at AS "updatedAt"
+      FROM week_sets ORDER BY week_of
+    `) as WeekSet[];
+    return rows.map((r) => ({
       ...r,
-      date: r.date ? new Date(r.date).toISOString().slice(0, 10) : null,
+      weekOf: new Date(r.weekOf).toISOString().slice(0, 10),
     }));
   },
 
-  async createSet(name: string) {
+  async createWeekSet(weekOf: string, copyFromWeekOf: string | null) {
     await init();
-    await sql`
-      INSERT INTO swim_sets (id, name, date, grid)
-      VALUES (${randomUUID()}, ${name}, ${null}, ${sql.json(defaultSetRows())})
-    `;
-    return pgStore.getSets();
+    const existing = (await sql`SELECT id FROM week_sets WHERE week_of = ${weekOf}`) as {
+      id: string;
+    }[];
+    if (!existing.length) {
+      let lanes = emptyLanes();
+      if (copyFromWeekOf) {
+        const source = (await sql`
+          SELECT lanes FROM week_sets WHERE week_of = ${copyFromWeekOf}
+        `) as { lanes: Record<Lane, SetRow[]> }[];
+        if (source.length) lanes = source[0].lanes;
+      }
+      await sql`
+        INSERT INTO week_sets (id, week_of, lanes) VALUES (${randomUUID()}, ${weekOf}, ${sql.json(lanes)})
+      `;
+    }
+    return pgStore.getWeekSets();
   },
 
-  async updateSet(id: string, input: SetUpdate) {
+  async updateWeekSet(id: string, lanes: Record<Lane, SetRow[]>) {
     await init();
     await sql`
-      UPDATE swim_sets
-      SET name = ${input.name}, date = ${input.date}, grid = ${sql.json(input.rows)}
-      WHERE id = ${id}
+      UPDATE week_sets SET lanes = ${sql.json(lanes)}, updated_at = now() WHERE id = ${id}
     `;
-    return pgStore.getSets();
+    return pgStore.getWeekSets();
   },
 
-  async deleteSet(id: string) {
+  async deleteWeekSet(id: string) {
     await init();
-    await sql`DELETE FROM swim_sets WHERE id = ${id}`;
-    return pgStore.getSets();
+    await sql`DELETE FROM week_sets WHERE id = ${id}`;
+    return pgStore.getWeekSets();
   },
 };

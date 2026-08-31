@@ -1,13 +1,13 @@
-import SetsPageClient from "@/components/SetsPageClient";
+import WeeksPageClient from "@/components/WeeksPageClient";
 import { store } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
 export default async function SetsPage() {
-  const sets = await store.getSets();
+  const weeks = await store.getWeekSets();
   return (
     <div className="min-h-full bg-[var(--background)]">
-      <SetsPageClient initial={sets} />
+      <WeeksPageClient initial={weeks} />
     </div>
   );
 }

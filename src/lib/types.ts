@@ -28,29 +28,80 @@ export type WaitSession = {
   createdAt: string;
 };
 
-// A set is one ordered list of labeled distances (warm up, drills, main set
-// legs, cool down, ...) with a running total — one card per workout. Doing a
-// side-by-side comparison of a few sets just means creating a few of them.
+// Squad swims Tuesday mornings in three fixed lanes. A "week set" is one
+// Tuesday's session: one ordered list of labeled distances per lane.
+export const LANES = ["Faster Pasta", "Mild sauce", "Leisure Lane"] as const;
+export type Lane = (typeof LANES)[number];
+
 export type SetRow = {
   label: string;
   distance: number | null;
 };
 
-export type SwimSet = {
+export type WeekSet = {
   id: string;
-  name: string;
-  date: string | null;
-  rows: SetRow[];
+  weekOf: string; // ISO date of that week's Tuesday
+  lanes: Record<Lane, SetRow[]>;
   createdAt: string;
+  updatedAt: string;
 };
 
-export function defaultSetRows(): SetRow[] {
+export function defaultLaneRows(): SetRow[] {
   return [
     { label: "Warm up", distance: 200 },
     { label: "Drill", distance: 100 },
     { label: "Main set", distance: null },
     { label: "Cool down", distance: 100 },
   ];
+}
+
+export function emptyLanes(): Record<Lane, SetRow[]> {
+  return {
+    "Faster Pasta": defaultLaneRows(),
+    "Mild sauce": defaultLaneRows(),
+    "Leisure Lane": defaultLaneRows(),
+  };
+}
+
+// Pure calendar-date arithmetic, anchored in UTC so it never drifts with the
+// host's or browser's local time zone — every date here is a plain
+// yyyy-mm-dd string, not an instant.
+function parseISODate(iso: string): Date {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
+}
+function toISODate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+export function addDaysISO(iso: string, days: number): string {
+  const d = parseISODate(iso);
+  d.setUTCDate(d.getUTCDate() + days);
+  return toISODate(d);
+}
+
+// The Tuesday (ISO date) of the calendar week containing `iso` — may be
+// before, on, or after `iso` depending on what day of the week it is.
+export function tuesdayOfWeek(iso: string): string {
+  const d = parseISODate(iso);
+  const day = d.getUTCDay(); // Sun=0 ... Tue=2 ... Sat=6
+  d.setUTCDate(d.getUTCDate() + (2 - day));
+  return toISODate(d);
+}
+
+// Most recent Tuesday whose 7am swim has already happened, given today's
+// local date and hour.
+export function lastCompletedSwimTuesday(todayIso: string, todayHour: number): string {
+  const tue = tuesdayOfWeek(todayIso);
+  if (tue > todayIso || (tue === todayIso && todayHour < 7)) {
+    return addDaysISO(tue, -7);
+  }
+  return tue;
+}
+
+// The Tuesday to prep next, once the most recent swim is done.
+export function nextWeekToPrep(todayIso: string, todayHour: number): string {
+  return addDaysISO(lastCompletedSwimTuesday(todayIso, todayHour), 7);
 }
 
 // Validated categorical palette (light-mode hex) — fixed order, never cycled/reassigned.

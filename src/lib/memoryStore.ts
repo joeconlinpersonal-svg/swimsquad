@@ -2,13 +2,15 @@ import { randomUUID } from "crypto";
 import { parseTimeToSeconds } from "./time";
 import { SEED_SWIMMERS, SEED_WAIT_SESSIONS } from "./seedData";
 import {
-  defaultSetRows,
+  emptyLanes,
   SWIMMER_COLORS,
+  type Lane,
+  type SetRow,
   type SwimmerWithEntries,
-  type SwimSet,
   type WaitSession,
+  type WeekSet,
 } from "./types";
-import type { EntryUpdate, NewEntryInput, SetUpdate, SwimStore } from "./store.types";
+import type { EntryUpdate, NewEntryInput, SwimStore } from "./store.types";
 
 const numColors = SWIMMER_COLORS.length;
 
@@ -48,7 +50,7 @@ function buildInitialWaitSessions(): WaitSession[] {
 const globalForStore = globalThis as unknown as {
   __swimState?: SwimmerWithEntries[];
   __waitState?: WaitSession[];
-  __setsState?: SwimSet[];
+  __weekSetsState?: WeekSet[];
 };
 if (!globalForStore.__swimState) {
   globalForStore.__swimState = buildInitialState();
@@ -56,8 +58,8 @@ if (!globalForStore.__swimState) {
 if (!globalForStore.__waitState) {
   globalForStore.__waitState = buildInitialWaitSessions();
 }
-if (!globalForStore.__setsState) {
-  globalForStore.__setsState = [];
+if (!globalForStore.__weekSetsState) {
+  globalForStore.__weekSetsState = [];
 }
 
 export const memoryStore: SwimStore = {
@@ -131,33 +133,43 @@ export const memoryStore: SwimStore = {
     return globalForStore.__waitState!;
   },
 
-  async getSets() {
-    return globalForStore.__setsState!;
+  async getWeekSets() {
+    return globalForStore.__weekSetsState!;
   },
 
-  async createSet(name: string) {
-    globalForStore.__setsState!.push({
+  async createWeekSet(weekOf: string, copyFromWeekOf: string | null) {
+    const existing = globalForStore.__weekSetsState!.find((w) => w.weekOf === weekOf);
+    if (existing) return globalForStore.__weekSetsState!;
+
+    const source = copyFromWeekOf
+      ? globalForStore.__weekSetsState!.find((w) => w.weekOf === copyFromWeekOf)
+      : undefined;
+    const lanes: Record<Lane, SetRow[]> = source
+      ? (JSON.parse(JSON.stringify(source.lanes)) as Record<Lane, SetRow[]>)
+      : emptyLanes();
+
+    const now = new Date().toISOString();
+    globalForStore.__weekSetsState!.push({
       id: randomUUID(),
-      name,
-      date: null,
-      rows: defaultSetRows(),
-      createdAt: new Date().toISOString(),
+      weekOf,
+      lanes,
+      createdAt: now,
+      updatedAt: now,
     });
-    return globalForStore.__setsState!;
+    return globalForStore.__weekSetsState!;
   },
 
-  async updateSet(id: string, input: SetUpdate) {
-    const set = globalForStore.__setsState!.find((s) => s.id === id);
-    if (set) {
-      set.name = input.name;
-      set.date = input.date;
-      set.rows = input.rows;
+  async updateWeekSet(id: string, lanes: Record<Lane, SetRow[]>) {
+    const week = globalForStore.__weekSetsState!.find((w) => w.id === id);
+    if (week) {
+      week.lanes = lanes;
+      week.updatedAt = new Date().toISOString();
     }
-    return globalForStore.__setsState!;
+    return globalForStore.__weekSetsState!;
   },
 
-  async deleteSet(id: string) {
-    globalForStore.__setsState = globalForStore.__setsState!.filter((s) => s.id !== id);
-    return globalForStore.__setsState;
+  async deleteWeekSet(id: string) {
+    globalForStore.__weekSetsState = globalForStore.__weekSetsState!.filter((w) => w.id !== id);
+    return globalForStore.__weekSetsState;
   },
 };
