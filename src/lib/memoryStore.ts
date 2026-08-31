@@ -2,10 +2,9 @@ import { randomUUID } from "crypto";
 import { parseTimeToSeconds } from "./time";
 import { SEED_SWIMMERS, SEED_WAIT_SESSIONS } from "./seedData";
 import {
-  emptyLanes,
+  defaultLanes,
   SWIMMER_COLORS,
-  type Lane,
-  type SetRow,
+  type SetLane,
   type SwimmerWithEntries,
   type WaitSession,
   type WeekSet,
@@ -144,9 +143,9 @@ export const memoryStore: SwimStore = {
     const source = copyFromWeekOf
       ? globalForStore.__weekSetsState!.find((w) => w.weekOf === copyFromWeekOf)
       : undefined;
-    const lanes: Record<Lane, SetRow[]> = source
-      ? (JSON.parse(JSON.stringify(source.lanes)) as Record<Lane, SetRow[]>)
-      : emptyLanes();
+    const lanes: SetLane[] = source
+      ? (JSON.parse(JSON.stringify(source.lanes)) as SetLane[])
+      : defaultLanes();
 
     const now = new Date().toISOString();
     globalForStore.__weekSetsState!.push({
@@ -159,7 +158,7 @@ export const memoryStore: SwimStore = {
     return globalForStore.__weekSetsState!;
   },
 
-  async updateWeekSet(id: string, lanes: Record<Lane, SetRow[]>) {
+  async updateWeekSet(id: string, lanes: SetLane[]) {
     const week = globalForStore.__weekSetsState!.find((w) => w.id === id);
     if (week) {
       week.lanes = lanes;

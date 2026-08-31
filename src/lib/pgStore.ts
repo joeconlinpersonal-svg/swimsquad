@@ -3,11 +3,11 @@ import { randomUUID } from "crypto";
 import { SEED_SWIMMERS, SEED_WAIT_SESSIONS } from "./seedData";
 import { parseTimeToSeconds } from "./time";
 import {
-  emptyLanes,
-  LANES,
+  DEFAULT_LANE_NAMES,
+  defaultLanes,
   SWIMMER_COLORS,
   type Entry,
-  type Lane,
+  type SetLane,
   type SetRow,
   type Swimmer,
   type SwimmerWithEntries,
@@ -124,12 +124,13 @@ async function ensureSchema() {
       SELECT name, date, grid FROM swim_sets WHERE date IS NOT NULL
     `) as { name: string; date: string; grid: SetRow[] }[];
 
-    const byWeek = new Map<string, Record<Lane, SetRow[]>>();
+    const byWeek = new Map<string, SetLane[]>();
     for (const row of legacyRows) {
       const weekOf = new Date(row.date).toISOString().slice(0, 10);
-      if (!LANES.includes(row.name as Lane)) continue;
-      const lanes = byWeek.get(weekOf) ?? emptyLanes();
-      lanes[row.name as Lane] = row.grid;
+      if (!DEFAULT_LANE_NAMES.includes(row.name)) continue;
+      const lanes = byWeek.get(weekOf) ?? defaultLanes();
+      const lane = lanes.find((l) => l.name === row.name);
+      if (lane) lane.rows = row.grid;
       byWeek.set(weekOf, lanes);
     }
 
@@ -252,11 +253,11 @@ export const pgStore: SwimStore = {
       id: string;
     }[];
     if (!existing.length) {
-      let lanes = emptyLanes();
+      let lanes = defaultLanes();
       if (copyFromWeekOf) {
         const source = (await sql`
           SELECT lanes FROM week_sets WHERE week_of = ${copyFromWeekOf}
-        `) as { lanes: Record<Lane, SetRow[]> }[];
+        `) as { lanes: SetLane[] }[];
         if (source.length) lanes = source[0].lanes;
       }
       await sql`
@@ -266,7 +267,7 @@ export const pgStore: SwimStore = {
     return pgStore.getWeekSets();
   },
 
-  async updateWeekSet(id: string, lanes: Record<Lane, SetRow[]>) {
+  async updateWeekSet(id: string, lanes: SetLane[]) {
     await init();
     await sql`
       UPDATE week_sets SET lanes = ${sql.json(lanes)}, updated_at = now() WHERE id = ${id}

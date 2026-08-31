@@ -28,20 +28,26 @@ export type WaitSession = {
   createdAt: string;
 };
 
-// Squad swims Tuesday mornings in three fixed lanes. A "week set" is one
-// Tuesday's session: one ordered list of labeled distances per lane.
-export const LANES = ["Faster Pasta", "Mild sauce", "Leisure Lane"] as const;
-export type Lane = (typeof LANES)[number];
+// Squad swims Tuesday mornings, normally in three lanes. A "week set" is one
+// Tuesday's session: one ordered list of labeled distances per lane. New
+// weeks start with these three, but a lane can be added or removed per week
+// (e.g. a one-off fourth lane) — so lanes are an ordered list, not a fixed set.
+export const DEFAULT_LANE_NAMES = ["Faster Pasta", "Mild sauce", "Leisure Lane"];
 
 export type SetRow = {
   label: string;
   distance: number | null;
 };
 
+export type SetLane = {
+  name: string;
+  rows: SetRow[];
+};
+
 export type WeekSet = {
   id: string;
   weekOf: string; // ISO date of that week's Tuesday
-  lanes: Record<Lane, SetRow[]>;
+  lanes: SetLane[];
   createdAt: string;
   updatedAt: string;
 };
@@ -55,12 +61,8 @@ export function defaultLaneRows(): SetRow[] {
   ];
 }
 
-export function emptyLanes(): Record<Lane, SetRow[]> {
-  return {
-    "Faster Pasta": defaultLaneRows(),
-    "Mild sauce": defaultLaneRows(),
-    "Leisure Lane": defaultLaneRows(),
-  };
+export function defaultLanes(): SetLane[] {
+  return DEFAULT_LANE_NAMES.map((name) => ({ name, rows: defaultLaneRows() }));
 }
 
 // Pure calendar-date arithmetic, anchored in UTC so it never drifts with the

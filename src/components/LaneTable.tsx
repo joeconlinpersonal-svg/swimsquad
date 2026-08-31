@@ -1,37 +1,67 @@
 "use client";
 
-import type { Lane, SetRow } from "@/lib/types";
+import type { SetLane, SetRow } from "@/lib/types";
 
 type Props = {
-  lane: Lane;
-  rows: SetRow[];
+  lane: SetLane;
   mode: "view" | "edit";
-  onChange?: (rows: SetRow[]) => void;
+  onChange?: (lane: SetLane) => void;
+  onRemoveLane?: () => void;
 };
 
-export default function LaneTable({ lane, rows, mode, onChange }: Props) {
+export default function LaneTable({ lane, mode, onChange, onRemoveLane }: Props) {
+  const { name, rows } = lane;
   const total = rows.reduce((sum, r) => sum + (r.distance ?? 0), 0);
 
+  function updateRows(nextRows: SetRow[]) {
+    onChange?.({ ...lane, rows: nextRows });
+  }
+
+  function updateName(value: string) {
+    onChange?.({ ...lane, name: value });
+  }
+
   function updateLabel(rowIndex: number, value: string) {
-    onChange?.(rows.map((r, i) => (i === rowIndex ? { ...r, label: value } : r)));
+    updateRows(rows.map((r, i) => (i === rowIndex ? { ...r, label: value } : r)));
   }
 
   function updateDistance(rowIndex: number, raw: string) {
     const distance = raw.trim() === "" ? null : Number(raw);
-    onChange?.(rows.map((r, i) => (i === rowIndex ? { ...r, distance } : r)));
+    updateRows(rows.map((r, i) => (i === rowIndex ? { ...r, distance } : r)));
   }
 
   function addRow() {
-    onChange?.([...rows, { label: "", distance: null }]);
+    updateRows([...rows, { label: "", distance: null }]);
   }
 
   function removeRow(rowIndex: number) {
-    onChange?.(rows.filter((_, i) => i !== rowIndex));
+    updateRows(rows.filter((_, i) => i !== rowIndex));
   }
 
   return (
     <div className="flex w-56 shrink-0 flex-col gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2.5">
-      <h3 className="text-xs font-semibold">{lane}</h3>
+      {mode === "edit" ? (
+        <div className="flex items-center gap-1">
+          <input
+            value={name}
+            onChange={(e) => updateName(e.target.value)}
+            placeholder="Lane name"
+            className="min-w-0 flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-1.5 py-1 text-xs font-semibold"
+          />
+          {onRemoveLane && (
+            <button
+              type="button"
+              onClick={onRemoveLane}
+              aria-label="Remove lane"
+              className="shrink-0 rounded-md px-1 text-xs text-[var(--text-muted)] hover:text-[#e34948]"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      ) : (
+        <h3 className="text-xs font-semibold">{name}</h3>
+      )}
 
       {mode === "view" ? (
         <table className="w-full border-collapse text-xs">

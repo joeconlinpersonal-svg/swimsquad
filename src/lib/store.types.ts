@@ -1,4 +1,4 @@
-import type { Distance, Lane, SetRow, SwimmerWithEntries, WaitSession, WeekSet } from "./types";
+import type { Distance, SetLane, SwimmerWithEntries, WaitSession, WeekSet } from "./types";
 
 export type NewEntryInput = {
   swimmerId: string;
@@ -24,6 +24,6 @@ export interface SwimStore {
   updateWaitSession(id: string, seconds: number, date: string): Promise<WaitSession[]>;
   getWeekSets(): Promise<WeekSet[]>;
   createWeekSet(weekOf: string, copyFromWeekOf: string | null): Promise<WeekSet[]>;
-  updateWeekSet(id: string, lanes: Record<Lane, SetRow[]>): Promise<WeekSet[]>;
+  updateWeekSet(id: string, lanes: SetLane[]): Promise<WeekSet[]>;
   deleteWeekSet(id: string): Promise<WeekSet[]>;
 }

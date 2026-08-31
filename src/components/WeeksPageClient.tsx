@@ -4,7 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import LaneTable from "./LaneTable";
 import { localToday } from "@/lib/time";
-import { LANES, addDaysISO, nextWeekToPrep, type Lane, type SetRow, type WeekSet } from "@/lib/types";
+import {
+  addDaysISO,
+  defaultLaneRows,
+  nextWeekToPrep,
+  type SetLane,
+  type WeekSet,
+} from "@/lib/types";
 
 function formatWeekOf(iso: string): string {
   const d = new Date(iso + "T00:00:00");
@@ -16,24 +22,20 @@ function formatWeekOf(iso: string): string {
   });
 }
 
-function mostRecentWeekOf(weeks: WeekSet[]): string | null {
-  if (!weeks.length) return null;
-  return weeks.reduce((a, b) => (a.weekOf > b.weekOf ? a : b)).weekOf;
-}
-
 export default function WeeksPageClient({ initial }: { initial: WeekSet[] }) {
   const [weeks, setWeeks] = useState(initial);
   const [upcoming, setUpcoming] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [mode, setMode] = useState<"view" | "edit">("view");
-  const [draftLanes, setDraftLanes] = useState<Record<Lane, SetRow[]> | null>(null);
+  const [draftLanes, setDraftLanes] = useState<SetLane[] | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Resolve "today" client-side only — the app has no server-side notion of
   // the squad's local time zone, so computing this during SSR would either
   // use the deployment's (likely UTC) clock or mismatch the browser's on
-  // hydration. A brief blank state on mount is the trade-off.
+  // hydration. A brief blank state on mount is the trade-off. The page
+  // always opens on the upcoming Tuesday, whether or not it has a set yet.
   useEffect(() => {
     // new Date() must not run during render, or SSR (server clock) and
     // hydration (browser clock) will disagree and React will warn/flash.
@@ -41,8 +43,8 @@ export default function WeeksPageClient({ initial }: { initial: WeekSet[] }) {
     const up = nextWeekToPrep(iso, hour);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setUpcoming(up);
-    setSelected(initial.some((w) => w.weekOf === up) ? up : (mostRecentWeekOf(initial) ?? up));
-  }, [initial]);
+    setSelected(up);
+  }, []);
 
   const currentWeek = selected ? (weeks.find((w) => w.weekOf === selected) ?? null) : null;
   const needsUpcomingSet = upcoming !== null && !weeks.some((w) => w.weekOf === upcoming);
@@ -134,6 +136,20 @@ export default function WeeksPageClient({ initial }: { initial: WeekSet[] }) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setSaving(false);
     }
+  }
+
+  function updateLane(index: number, lane: SetLane) {
+    setDraftLanes((d) => (d ? d.map((l, i) => (i === index ? lane : l)) : d));
+  }
+
+  function addLane() {
+    setDraftLanes((d) =>
+      d ? [...d, { name: `Lane ${d.length + 1}`, rows: defaultLaneRows() }] : d
+    );
+  }
+
+  function removeLane(index: number) {
+    setDraftLanes((d) => (d ? d.filter((_, i) => i !== index) : d));
   }
 
   const displayLanes = mode === "edit" ? draftLanes : (currentWeek?.lanes ?? null);
@@ -264,19 +280,26 @@ export default function WeeksPageClient({ initial }: { initial: WeekSet[] }) {
 
               <div className="flex items-start gap-3 overflow-x-auto pb-2">
                 {displayLanes &&
-                  LANES.map((lane) => (
+                  displayLanes.map((lane, i) => (
                     <LaneTable
-                      key={lane}
+                      key={i}
                       lane={lane}
-                      rows={displayLanes[lane]}
                       mode={mode}
-                      onChange={
-                        mode === "edit"
-                          ? (rows) => setDraftLanes((d) => (d ? { ...d, [lane]: rows } : d))
-                          : undefined
+                      onChange={mode === "edit" ? (l) => updateLane(i, l) : undefined}
+                      onRemoveLane={
+                        mode === "edit" && displayLanes.length > 1 ? () => removeLane(i) : undefined
                       }
                     />
                   ))}
+                {mode === "edit" && (
+                  <button
+                    type="button"
+                    onClick={addLane}
+                    className="flex w-56 shrink-0 items-center justify-center rounded-xl border border-dashed border-[var(--border)] p-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface)]"
+                  >
+                    + Lane
+                  </button>
+                )}
               </div>
             </div>
           )}

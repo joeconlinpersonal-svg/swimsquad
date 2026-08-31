@@ -1,22 +1,23 @@
 import { NextResponse } from "next/server";
 import { store } from "@/lib/store";
-import { LANES, type Lane, type SetRow } from "@/lib/types";
+import type { SetLane } from "@/lib/types";
 
-function isValidLanes(lanes: unknown): lanes is Record<Lane, SetRow[]> {
-  if (!lanes || typeof lanes !== "object") return false;
-  const l = lanes as Record<string, unknown>;
-  return LANES.every((lane) => {
-    const rows = l[lane];
-    return (
-      Array.isArray(rows) &&
-      rows.every(
-        (r) =>
+function isValidLanes(lanes: unknown): lanes is SetLane[] {
+  if (!Array.isArray(lanes)) return false;
+  return lanes.every(
+    (lane) =>
+      lane &&
+      typeof lane.name === "string" &&
+      Array.isArray(lane.rows) &&
+      lane.rows.every(
+        (r: unknown) =>
           r &&
-          typeof r.label === "string" &&
-          (r.distance === null || typeof r.distance === "number")
+          typeof r === "object" &&
+          typeof (r as { label?: unknown }).label === "string" &&
+          ((r as { distance?: unknown }).distance === null ||
+            typeof (r as { distance?: unknown }).distance === "number")
       )
-    );
-  });
+  );
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
