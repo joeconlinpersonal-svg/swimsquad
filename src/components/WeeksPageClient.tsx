@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import LaneTable from "./LaneTable";
+import Spinner from "./Spinner";
 import { localToday } from "@/lib/time";
 import {
   addDaysISO,
@@ -29,6 +30,8 @@ export default function WeeksPageClient({ initial }: { initial: WeekSet[] }) {
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [draftLanes, setDraftLanes] = useState<SetLane[] | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [creatingFrom, setCreatingFrom] = useState<"copy" | "blank" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Resolve "today" client-side only — the app has no server-side notion of
@@ -65,7 +68,7 @@ export default function WeeksPageClient({ initial }: { initial: WeekSet[] }) {
 
   async function handleCreate(copyFromWeekOf: string | null) {
     if (!selected) return;
-    setSaving(true);
+    setCreatingFrom(copyFromWeekOf ? "copy" : "blank");
     setError(null);
     try {
       const res = await fetch("/api/weeks", {
@@ -84,7 +87,7 @@ export default function WeeksPageClient({ initial }: { initial: WeekSet[] }) {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
-      setSaving(false);
+      setCreatingFrom(null);
     }
   }
 
@@ -124,7 +127,8 @@ export default function WeeksPageClient({ initial }: { initial: WeekSet[] }) {
   async function handleDelete() {
     if (!currentWeek) return;
     if (!confirm(`Delete the set for ${formatWeekOf(currentWeek.weekOf)}?`)) return;
-    setSaving(true);
+    setDeleting(true);
+    setError(null);
     try {
       const res = await fetch(`/api/weeks/${currentWeek.id}`, { method: "DELETE" });
       const data = await res.json();
@@ -134,7 +138,8 @@ export default function WeeksPageClient({ initial }: { initial: WeekSet[] }) {
       setDraftLanes(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
-      setSaving(false);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -172,7 +177,21 @@ export default function WeeksPageClient({ initial }: { initial: WeekSet[] }) {
       </header>
 
       {!selected ? (
-        <div className="h-24 rounded-xl border border-[var(--border)] bg-[var(--surface)]" />
+        <div className="flex animate-pulse flex-col gap-4">
+          <div className="h-14 rounded-xl border border-[var(--border)] bg-[var(--surface)]" />
+          <div className="flex items-center justify-end gap-2">
+            <div className="h-7 w-16 rounded-full bg-[var(--surface)]" />
+            <div className="h-7 w-16 rounded-full bg-[var(--surface)]" />
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="h-48 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] sm:w-56"
+              />
+            ))}
+          </div>
+        </div>
       ) : (
         <>
           {needsUpcomingSet && upcoming && (
@@ -224,17 +243,19 @@ export default function WeeksPageClient({ initial }: { initial: WeekSet[] }) {
                 {mostRecentBefore && (
                   <button
                     onClick={() => handleCreate(mostRecentBefore.weekOf)}
-                    disabled={saving}
-                    className="rounded-full bg-[var(--foreground)] px-4 py-1.5 text-sm font-medium text-[var(--background)] disabled:opacity-50"
+                    disabled={creatingFrom !== null}
+                    className="flex items-center justify-center gap-1.5 rounded-full bg-[var(--foreground)] px-4 py-1.5 text-sm font-medium text-[var(--background)] disabled:opacity-50"
                   >
+                    {creatingFrom === "copy" && <Spinner />}
                     Copy from {formatWeekOf(mostRecentBefore.weekOf)}
                   </button>
                 )}
                 <button
                   onClick={() => handleCreate(null)}
-                  disabled={saving}
-                  className="rounded-full border border-[var(--border)] px-4 py-1.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--background)] disabled:opacity-50"
+                  disabled={creatingFrom !== null}
+                  className="flex items-center justify-center gap-1.5 rounded-full border border-[var(--border)] px-4 py-1.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--background)] disabled:opacity-50"
                 >
+                  {creatingFrom === "blank" && <Spinner />}
                   Start blank
                 </button>
               </div>
@@ -252,10 +273,11 @@ export default function WeeksPageClient({ initial }: { initial: WeekSet[] }) {
                     </button>
                     <button
                       onClick={handleDelete}
-                      disabled={saving}
-                      className="rounded-full border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-muted)] hover:text-[#e34948] disabled:opacity-50"
+                      disabled={deleting}
+                      className="flex items-center justify-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-muted)] hover:text-[#e34948] disabled:opacity-50"
                     >
-                      Delete
+                      {deleting && <Spinner />}
+                      {deleting ? "Deleting…" : "Delete"}
                     </button>
                   </>
                 ) : (
@@ -270,8 +292,9 @@ export default function WeeksPageClient({ initial }: { initial: WeekSet[] }) {
                     <button
                       onClick={handleSave}
                       disabled={saving}
-                      className="rounded-full bg-[var(--foreground)] px-3 py-1.5 text-xs font-medium text-[var(--background)] disabled:opacity-50"
+                      className="flex items-center justify-center gap-1.5 rounded-full bg-[var(--foreground)] px-3 py-1.5 text-xs font-medium text-[var(--background)] disabled:opacity-50"
                     >
+                      {saving && <Spinner />}
                       {saving ? "Saving…" : "Save"}
                     </button>
                   </>

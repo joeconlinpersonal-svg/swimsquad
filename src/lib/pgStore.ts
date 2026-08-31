@@ -223,6 +223,12 @@ export const pgStore: SwimStore = {
     return loadAll();
   },
 
+  async deleteEntry(id: string) {
+    await init();
+    await sql`DELETE FROM entries WHERE id = ${id}`;
+    return loadAll();
+  },
+
   async getWaitSessions() {
     await init();
     const rows = (await sql`
@@ -245,6 +251,12 @@ export const pgStore: SwimStore = {
   async updateWaitSession(id: string, seconds: number, date: string) {
     await init();
     await sql`UPDATE wait_sessions SET seconds = ${seconds}, date = ${date} WHERE id = ${id}`;
+    return pgStore.getWaitSessions();
+  },
+
+  async deleteWaitSession(id: string) {
+    await init();
+    await sql`DELETE FROM wait_sessions WHERE id = ${id}`;
     return pgStore.getWaitSessions();
   },
 

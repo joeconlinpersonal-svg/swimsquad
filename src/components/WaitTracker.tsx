@@ -10,6 +10,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import Spinner from "./Spinner";
+import UndoToast from "./UndoToast";
 import { formatDate, formatSecondsToTime } from "@/lib/time";
 import type { WaitSession } from "@/lib/types";
 
@@ -42,6 +44,8 @@ export default function WaitTracker({ initial }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTime, setEditTime] = useState("");
   const [editDate, setEditDate] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [undoSession, setUndoSession] = useState<WaitSession | null>(null);
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -98,6 +102,36 @@ export default function WaitTracker({ initial }: Props) {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleDelete(session: WaitSession) {
+    setDeletingId(session.id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/wait-sessions/${session.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not delete session");
+      setSessions(data.sessions);
+      setEditingId(null);
+      setUndoSession(session);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  async function restoreSession() {
+    if (!undoSession) return;
+    const { seconds, date } = undoSession;
+    setUndoSession(null);
+    const res = await fetch("/api/wait-sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ seconds, date }),
+    });
+    const data = await res.json();
+    if (res.ok) setSessions(data.sessions);
   }
 
   const total = sessions.reduce((sum, s) => sum + s.seconds, 0);
@@ -169,9 +203,10 @@ export default function WaitTracker({ initial }: Props) {
           <button
             type="submit"
             disabled={saving}
-            className="rounded-full bg-[var(--foreground)] px-4 py-1.5 text-sm font-medium text-[var(--background)] disabled:opacity-50"
+            className="flex items-center justify-center gap-1.5 rounded-full bg-[var(--foreground)] px-4 py-1.5 text-sm font-medium text-[var(--background)] disabled:opacity-50"
           >
-            + Add
+            {saving && <Spinner />}
+            {saving ? "Adding…" : "+ Add"}
           </button>
         </form>
       </div>
@@ -247,10 +282,20 @@ export default function WaitTracker({ initial }: Props) {
                       <button
                         type="button"
                         onClick={() => saveEdit(s.id)}
-                        disabled={saving}
-                        className="px-1 text-[10px] font-medium text-[var(--foreground)] disabled:opacity-50 sm:text-xs"
+                        disabled={saving || deletingId === s.id}
+                        className="inline-flex items-center gap-1 px-1 text-[10px] font-medium text-[var(--foreground)] disabled:opacity-50 sm:text-xs"
                       >
+                        {saving && <Spinner />}
                         Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(s)}
+                        disabled={saving || deletingId === s.id}
+                        className="inline-flex items-center gap-1 px-1 text-[10px] text-[var(--text-muted)] hover:text-[#e34948] disabled:opacity-50 sm:text-xs"
+                      >
+                        {deletingId === s.id && <Spinner />}
+                        Delete
                       </button>
                       <button
                         type="button"
@@ -287,6 +332,14 @@ export default function WaitTracker({ initial }: Props) {
             </tbody>
           </table>
         </div>
+      )}
+
+      {undoSession && (
+        <UndoToast
+          message={`Deleted ${formatDate(undoSession.date)}'s wait (${formatSecondsToTime(undoSession.seconds)})`}
+          onUndo={restoreSession}
+          onDismiss={() => setUndoSession(null)}
+        />
       )}
     </section>
   );

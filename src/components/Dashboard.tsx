@@ -8,6 +8,7 @@ import ProgressTable from "./ProgressTable";
 import AddEntryModal from "./AddEntryModal";
 import EditEntryModal from "./EditEntryModal";
 import WaitTracker from "./WaitTracker";
+import UndoToast from "./UndoToast";
 import { paceHistory } from "@/lib/stats";
 import { DISTANCES, type Entry, type SwimmerWithEntries, type WaitSession } from "@/lib/types";
 
@@ -23,6 +24,26 @@ export default function Dashboard({
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<{ entry: Entry; swimmerName: string } | null>(null);
   const [filterId, setFilterId] = useState<string>("all");
+  const [undoEntry, setUndoEntry] = useState<{ entry: Entry; swimmerName: string } | null>(null);
+
+  async function restoreEntry() {
+    if (!undoEntry) return;
+    const { entry } = undoEntry;
+    setUndoEntry(null);
+    const res = await fetch("/api/entries", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        swimmerId: entry.swimmerId,
+        distance: entry.distance,
+        time: `${Math.floor(entry.timeSeconds / 60)}:${String(entry.timeSeconds % 60).padStart(2, "0")}`,
+        date: entry.date,
+        note: entry.note,
+      }),
+    });
+    const data = await res.json();
+    if (res.ok) setSwimmers(data.swimmers);
+  }
 
   const totalSwims = swimmers.reduce((n, s) => n + s.entries.length, 0);
 
@@ -143,6 +164,18 @@ export default function Dashboard({
           swimmerName={editing.swimmerName}
           onClose={() => setEditing(null)}
           onSaved={setSwimmers}
+          onDeleted={(swimmers, entry, swimmerName) => {
+            setSwimmers(swimmers);
+            setUndoEntry({ entry, swimmerName });
+          }}
+        />
+      )}
+
+      {undoEntry && (
+        <UndoToast
+          message={`Deleted ${undoEntry.swimmerName}'s ${undoEntry.entry.distance}m swim`}
+          onUndo={restoreEntry}
+          onDismiss={() => setUndoEntry(null)}
         />
       )}
     </div>

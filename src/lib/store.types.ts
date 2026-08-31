@@ -19,9 +19,11 @@ export interface SwimStore {
   addSwimmer(name: string): Promise<SwimmerWithEntries>;
   addEntry(input: NewEntryInput): Promise<SwimmerWithEntries[]>;
   updateEntry(id: string, input: EntryUpdate): Promise<SwimmerWithEntries[]>;
+  deleteEntry(id: string): Promise<SwimmerWithEntries[]>;
   getWaitSessions(): Promise<WaitSession[]>;
   addWaitSession(seconds: number, date: string): Promise<WaitSession[]>;
   updateWaitSession(id: string, seconds: number, date: string): Promise<WaitSession[]>;
+  deleteWaitSession(id: string): Promise<WaitSession[]>;
   getWeekSets(): Promise<WeekSet[]>;
   createWeekSet(weekOf: string, copyFromWeekOf: string | null): Promise<WeekSet[]>;
   updateWeekSet(id: string, lanes: SetLane[]): Promise<WeekSet[]>;

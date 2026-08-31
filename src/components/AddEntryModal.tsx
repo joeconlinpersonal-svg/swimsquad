@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Spinner from "./Spinner";
 import { DISTANCES, type SwimmerWithEntries } from "@/lib/types";
 
 const INTERVAL_OPTIONS = ["@1:00", "@1:30", "@2:00", "@2:30", "@3:00", "@3:30", "@4:00"];
@@ -278,8 +279,9 @@ export default function AddEntryModal({ swimmers, initialSwimmerId, onClose, onS
         <button
           type="submit"
           disabled={saving}
-          className="mt-1 rounded-lg bg-[var(--foreground)] px-4 py-2 text-sm font-medium text-[var(--background)] disabled:opacity-50"
+          className="mt-1 flex items-center justify-center gap-1.5 rounded-lg bg-[var(--foreground)] px-4 py-2 text-sm font-medium text-[var(--background)] disabled:opacity-50"
         >
+          {saving && <Spinner />}
           {saving ? "Saving…" : "Save swim"}
         </button>
       </form>

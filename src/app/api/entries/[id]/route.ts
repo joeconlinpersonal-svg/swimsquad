@@ -17,3 +17,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const swimmers = await store.updateEntry(id, { timeSeconds, date, note });
   return NextResponse.json({ swimmers });
 }
+
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const swimmers = await store.deleteEntry(id);
+  return NextResponse.json({ swimmers });
+}

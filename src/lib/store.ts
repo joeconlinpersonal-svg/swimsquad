@@ -25,6 +25,9 @@ export const store: SwimStore = {
   async updateEntry(id, input) {
     return (await getStore()).updateEntry(id, input);
   },
+  async deleteEntry(id) {
+    return (await getStore()).deleteEntry(id);
+  },
   async getWaitSessions() {
     return (await getStore()).getWaitSessions();
   },
@@ -33,6 +36,9 @@ export const store: SwimStore = {
   },
   async updateWaitSession(id, seconds, date) {
     return (await getStore()).updateWaitSession(id, seconds, date);
+  },
+  async deleteWaitSession(id) {
+    return (await getStore()).deleteWaitSession(id);
   },
   async getWeekSets() {
     return (await getStore()).getWeekSets();

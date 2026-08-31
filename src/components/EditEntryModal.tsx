@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Spinner from "./Spinner";
 import type { Entry, SwimmerWithEntries } from "@/lib/types";
 
 const INTERVAL_OPTIONS = ["@1:00", "@1:30", "@2:00", "@2:30", "@3:00", "@3:30", "@4:00"];
@@ -11,9 +12,10 @@ type Props = {
   swimmerName: string;
   onClose: () => void;
   onSaved: (swimmers: SwimmerWithEntries[]) => void;
+  onDeleted: (swimmers: SwimmerWithEntries[], entry: Entry, swimmerName: string) => void;
 };
 
-export default function EditEntryModal({ entry, swimmerName, onClose, onSaved }: Props) {
+export default function EditEntryModal({ entry, swimmerName, onClose, onSaved, onDeleted }: Props) {
   const [time, setTime] = useState(secondsToInput(entry.timeSeconds));
   const [date, setDate] = useState(entry.date ?? "");
   const [note, setNote] = useState(entry.note ?? "");
@@ -22,6 +24,7 @@ export default function EditEntryModal({ entry, swimmerName, onClose, onSaved }:
   );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,6 +44,21 @@ export default function EditEntryModal({ entry, swimmerName, onClose, onSaved }:
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    setError(null);
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/entries/${entry.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not delete swim");
+      onDeleted(data.swimmers, entry, swimmerName);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+      setDeleting(false);
     }
   }
 
@@ -175,13 +193,25 @@ export default function EditEntryModal({ entry, swimmerName, onClose, onSaved }:
 
         {error && <p className="text-xs text-[#e34948]">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="mt-1 rounded-lg bg-[var(--foreground)] px-4 py-2 text-sm font-medium text-[var(--background)] disabled:opacity-50"
-        >
-          {saving ? "Saving…" : "Save changes"}
-        </button>
+        <div className="mt-1 flex items-center gap-2">
+          <button
+            type="submit"
+            disabled={saving || deleting}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[var(--foreground)] px-4 py-2 text-sm font-medium text-[var(--background)] disabled:opacity-50"
+          >
+            {saving && <Spinner />}
+            {saving ? "Saving…" : "Save changes"}
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={saving || deleting}
+            className="flex items-center justify-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-muted)] hover:text-[#e34948] disabled:opacity-50"
+          >
+            {deleting && <Spinner />}
+            {deleting ? "" : "Delete"}
+          </button>
+        </div>
       </form>
     </div>
   );

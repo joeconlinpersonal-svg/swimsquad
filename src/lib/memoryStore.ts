@@ -110,6 +110,17 @@ export const memoryStore: SwimStore = {
     return globalForStore.__swimState!;
   },
 
+  async deleteEntry(id: string) {
+    for (const swimmer of globalForStore.__swimState!) {
+      const index = swimmer.entries.findIndex((e) => e.id === id);
+      if (index !== -1) {
+        swimmer.entries.splice(index, 1);
+        break;
+      }
+    }
+    return globalForStore.__swimState!;
+  },
+
   async getWaitSessions() {
     return globalForStore.__waitState!;
   },
@@ -131,6 +142,11 @@ export const memoryStore: SwimStore = {
       session.date = date;
     }
     return globalForStore.__waitState!;
+  },
+
+  async deleteWaitSession(id: string) {
+    globalForStore.__waitState = globalForStore.__waitState!.filter((w) => w.id !== id);
+    return globalForStore.__waitState;
   },
 
   async getWeekSets() {
